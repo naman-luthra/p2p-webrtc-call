@@ -49,7 +49,8 @@ export const SocketContext = createContext<Socket<ServerToClientEvents, ClientTo
 export const SocketProvider = (props: {
     children: ReactNode;
   }) => {
-    const socket = useMemo(() => io('http://localhost:8000'), []);
+    const signalingServerUri = process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL || "http://localhost:8000";
+    const socket = useMemo(() => io(signalingServerUri), []);
   return (
     <SocketContext.Provider value={socket}>
       {props.children}

@@ -61,7 +61,7 @@ export default function Room({}){
         setRemoteVideos(remoteVideos ? [...remoteVideos, ...newPeers.map(()=>null)] : newPeers.map(()=>null));
         setPeers([...peers, ...newPeers]);
         socket?.emit("offersCreated", connections.roomId, offers);
-    },[]);
+    },[peers, remoteVideos, servers, socket]);
 
     const handleAcceptOffer = useCallback(async (offerWithSender: {
         offer: RTCSessionDescriptionInit,
@@ -79,7 +79,7 @@ export default function Room({}){
             answer,
             receiver: offerWithSender.sender
         });
-    },[]);
+    },[peers, remoteVideos, servers, socket]);
 
     const handleSaveAnswer = useCallback(async (answerWithPeer: {
         answer: RTCSessionDescriptionInit,
@@ -99,7 +99,7 @@ export default function Room({}){
         const offerDescription = await peer.peer.createOffer();
         await peer.peer.setLocalDescription(offerDescription);
         socket?.emit("negoOffer", {offer: offerDescription, to: peer.to});
-    },[]);
+    },[socket]);
 
     const handleNegoOfferAccept = useCallback(async (offerWithSender: {
         offer: RTCSessionDescriptionInit,
@@ -112,7 +112,7 @@ export default function Room({}){
         const answer = await peer.peer.createAnswer();
         await peer.peer.setLocalDescription(new RTCSessionDescription(answer));
         socket?.emit("negoAnswerCreated", {answer, to: offerWithSender.sender});
-    },[peers]);
+    },[peers, socket]);
 
     const handleNegoSaveAnswer = useCallback(async (answerWithPeer: {
         answer: RTCSessionDescriptionInit,
@@ -144,7 +144,9 @@ export default function Room({}){
         socket,
         handleCreateOffers,
         handleAcceptOffer,
-        handleSaveAnswer
+        handleSaveAnswer,
+        handleNegoOfferAccept,
+        handleNegoSaveAnswer,
     ]);
 
     useEffect(()=>{
@@ -174,7 +176,7 @@ export default function Room({}){
                 }) : []);
             });
         });
-    }, [peers]);
+    }, [peers, remoteVideos]);
 
     useEffect(() => {
         peers.forEach((peer)=>{
@@ -185,14 +187,13 @@ export default function Room({}){
                 peer.peer.removeEventListener("negotiationneeded", ()=>handleNegoInit(peer))
             });
         }
-    }, [peers]);
+    }, [peers, handleNegoInit]);
 
     useEffect(() => {
         remoteVideos?.forEach((remoteVideo, id)=>{
             if(!remoteVideo) return;
             const videoEle = document.getElementById(`remoteVideo-${id}`) as HTMLVideoElement;
             videoEle.srcObject = remoteVideo;
-            console.log(video, remoteVideo.getTracks());
         });
     }, [remoteVideos]);
 
@@ -212,13 +213,13 @@ export default function Room({}){
                     }
                 </div>
             </div>
-            <div className="w-1/2 h-screen relative group">
             {
                 remoteVideos.map((_,id)=>(
-                    <video id={`remoteVideo-${id}`} autoPlay className="w-full h-full relative"/>
+                    <div key={id} className="w-1/2 h-screen relative group">
+                        <video  id={`remoteVideo-${id}`} autoPlay className="w-full h-full relative"/>
+                    </div>
                 ))
             }
-            </div>
         </div>
     );
 }
