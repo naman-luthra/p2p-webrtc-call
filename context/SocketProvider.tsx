@@ -77,6 +77,10 @@ export const SocketProvider = (props: {
         console.log("clear tracks", socketId);
         peerContext?.clearTracks(socketId);
     },[])
+
+    const handleSocketDisconnect = useCallback(async (socketId: string)=>{
+        peerContext?.removePeer(socketId);
+    },[]);
     
 
     useEffect(() => {
@@ -87,6 +91,7 @@ export const SocketProvider = (props: {
         socket.on("negoSaveAnswer", handleNegoSaveAnswer);
         socket.on("saveIceCandidate", handleSaveIceCandidate);
         socket.on("clearTracks", handleClearTracks);
+        socket.on("socketDisconnected", handleSocketDisconnect);
     
         return () => {
             socket.off("createOffers", handleCreateOffers);
@@ -96,6 +101,7 @@ export const SocketProvider = (props: {
             socket.off("negoSaveAnswer", handleNegoSaveAnswer);
             socket.off("saveIceCandidate", handleSaveIceCandidate);
             socket.off("clearTracks", handleClearTracks);
+            socket.off("socketDisconnected", handleSocketDisconnect);
         };
       }, [
         socket,
@@ -104,7 +110,9 @@ export const SocketProvider = (props: {
         handleSaveAnswer,
         handleNegoOfferAccept,
         handleNegoSaveAnswer,
-        handleSaveIceCandidate
+        handleSaveIceCandidate,
+        handleClearTracks,
+        handleSocketDisconnect
     ]);
   return (
     <SocketContext.Provider value={socket}>

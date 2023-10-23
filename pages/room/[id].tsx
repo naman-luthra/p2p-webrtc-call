@@ -2,7 +2,7 @@
 import { PeerContext } from "@/context/PeersProvider";
 import { SocketContext } from "@/context/SocketProvider";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useRef, useState } from "react";
+import { use, useContext, useEffect, useRef, useState } from "react";
 import ReactPlayer from "react-player";
 
 export default function Room({}){
@@ -15,8 +15,6 @@ export default function Room({}){
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const [video, setVideo] = useState<MediaStream | null>(null);
-
-    const [refresher, setRefresher] = useState(1);
 
     const handleVideoOn = ()=>{
         navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(stream=>{
@@ -43,11 +41,58 @@ export default function Room({}){
         videoRef.current.srcObject = video;
     }, [video]);
 
+    const remoteStreams = peerContext?.peers.map(({stream})=>stream);
+
+    const [ audioPlaying, setAudioPlaying ] = useState<boolean[]>([]);
+
+    useEffect(()=>{
+        remoteStreams?.forEach((stream, id)=>{
+            const remoteVideo = document.getElementById(`remoteVideo${id}`) as HTMLVideoElement;
+            const remoteAudio = document.getElementById(`remoteAudio${id}`) as HTMLAudioElement;
+            if(remoteVideo){
+                remoteVideo.srcObject = stream;
+            }
+            if(remoteAudio){
+                remoteAudio.srcObject = stream;
+            }
+        });
+        return ()=>{
+            remoteStreams?.forEach((_, id)=>{
+                const remoteVideo = document.getElementById(`remoteVideo${id}`) as HTMLVideoElement;
+                const remoteAudio = document.getElementById(`remoteAudio${id}`) as HTMLAudioElement;
+                if(remoteVideo){
+                    remoteVideo.srcObject = null;
+                }
+                if(remoteAudio){
+                    remoteAudio.srcObject = null;
+                }
+            });
+        }
+    },[remoteStreams]);
+
+    useEffect(()=>{
+        console.log("audio playing", audioPlaying);
+        audioPlaying.forEach((playing, id)=>{
+            const remoteAudio = document.getElementById(`remoteAudio${id}`) as HTMLAudioElement
+            if(remoteAudio){
+                if(playing){
+                    if(remoteAudio.paused) remoteAudio.play();
+                }
+                else{
+                    if(!remoteAudio.paused) remoteAudio.pause();
+                }
+            }
+        });
+    },[audioPlaying]);
+
     console.log(peerContext?.peers);
 
     return (
-        <div className="flex">
-            <div className="w-1/2 h-screen relative group">
+        <div className="grid w-full h-screen gap-4 p-4" style={{
+            gridTemplateColumns: `repeat(${!peerContext?.peers.length ? 1 : peerContext?.peers.length<4 ? 2 : 3}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${!peerContext?.peers.length ? 1 : peerContext?.peers.length<2 ? 1 : 2}, minmax(0, 1fr))`
+            }}>
+            <div className="w-full h-full relative group rounded-lg border-sky-500 border-4">
                 <video id="localVideo" ref={videoRef} autoPlay muted className="w-full h-full relative"/>
                 <div className="absolute z-10 top-0 left-0 w-full h-full flex justify-center items-center">
                     {
@@ -61,15 +106,31 @@ export default function Room({}){
             </div>
             {
                 peerContext?.peers.map(({stream},id)=>(
-                    <div key={id} className="w-1/2 h-screen relative group">
+                    <div key={id} className="w-full h-full relative group rounded-lg border-sky-500 border-4">
                         {
                             (stream) &&
-                            <ReactPlayer playing url={stream}/>
+                            <>
+                                <audio id={`remoteAudio${id}`} className="hidden"></audio>
+                                <video id={`remoteVideo${id}`} playsInline autoPlay muted className="w-full h-full"></video>
+                                <div className="h-full w-full absolute top-0 right-0 flex justify-center items-center">
+                                    <button onClick={
+                                        ()=>{
+                                            const audio = document.getElementById(`remoteAudio${id}`) as HTMLAudioElement;
+                                            setAudioPlaying(prev=>{
+                                                const newAudioPlaying = [...prev];
+                                                newAudioPlaying[id] = audio.paused;
+                                                return newAudioPlaying;
+                                            });
+                                        }
+                                    } className={`bg-sky-600 px-4 py-2 rounded-2xl text-white text-xl font-semibold`}>{
+                                        audioPlaying[id] ? 'Mute' : 'Unmute'
+                                    }</button>
+                                </div>
+                            </>
                         }
                     </div>
                 ))
             }
-            <button onClick={()=>{setRefresher(refresher*-1)}}>Rerender</button>
         </div>
     );
 }

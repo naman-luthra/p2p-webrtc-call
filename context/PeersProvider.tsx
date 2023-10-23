@@ -14,17 +14,21 @@ export const PeerProvider = (props: {
         return peers.find(peer=>peer.socketId === socketId)?.peer;
     }
 
-    const handleTrackEvent = async (event: RTCTrackEvent, i: number) => {
+    const handleTrackEvent = async (event: RTCTrackEvent, socketId: string, socket:Socket<ServerToClientEvents, ClientToServerEvents>) => {
         console.log("track event", event);
         setPeers(prev=>{
             console.log("adding track...");
-            const newPeers = [...prev];
-            if(!newPeers[i].stream) newPeers[i].stream = new MediaStream();
-
-            event.streams[0].getTracks().forEach((track) => {
-                newPeers[i].stream?.addTrack(track);
+            const newPeers = prev.map(peer=>{
+                if(peer.socketId === socketId){
+                    if(!peer.stream) peer.stream = new MediaStream();
+                    event.streams[0].getTracks().forEach((track) => {
+                        peer.stream?.addTrack(track);
+                    });
+                    console.log(peer.stream?.getTracks());
+                }
+                return peer;
             });
-            console.log(newPeers[i].stream?.getTracks());
+            //handleNegoInit(newPeers[i].peer, newPeers[i].socketId, socket);
             return newPeers;
         });
     };
@@ -44,10 +48,27 @@ export const PeerProvider = (props: {
         const peer = new RTCPeerConnection({
             iceServers: [
                 {
-                urls: [
-                    "stun:stun.l.google.com:19302",
-                    "stun:global.stun.twilio.com:3478",
-                ],
+                  urls: "stun:stun.relay.metered.ca:80",
+                },
+                {
+                  urls: "turn:a.relay.metered.ca:80",
+                  username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+                  credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL,
+                },
+                {
+                  urls: "turn:a.relay.metered.ca:80?transport=tcp",
+                  username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+                  credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL,
+                },
+                {
+                  urls: "turn:a.relay.metered.ca:443",
+                  username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+                  credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL,
+                },
+                {
+                  urls: "turn:a.relay.metered.ca:443?transport=tcp",
+                  username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+                  credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL,
                 },
             ],
         });
@@ -58,7 +79,7 @@ export const PeerProvider = (props: {
         }
         peer.addEventListener("icecandidate", (event) => handleSendIceCandidate(event, socketId, socket));
         peer.addEventListener("negotiationneeded", () => handleNegoInit(peer, socketId, socket));
-        peer.addEventListener("track", (event) => handleTrackEvent(event, peers.length));
+        peer.addEventListener("track", (event) => handleTrackEvent(event, socketId, socket));
         setPeers(prev=>{
             return [...prev, {socketId, peer, stream: null}];
         });
@@ -139,6 +160,13 @@ export const PeerProvider = (props: {
         });
     }
 
+    const removePeer = (socketId: string) => {
+        setPeers(prev=>{
+            const newPeers = prev.filter(peer=>peer.socketId !== socketId);
+            return newPeers;
+        });
+    };
+
     return (
         <PeerContext.Provider value={{
             peers,
@@ -150,7 +178,8 @@ export const PeerProvider = (props: {
             sendStream,
             myStream,
             stopStream,
-            clearTracks
+            clearTracks,
+            removePeer
         }}>
             {props.children}
         </PeerContext.Provider>

@@ -27,6 +27,7 @@ export interface ServerToClientEvents {
         sender: string
     }) => void;
     clearTracks: (sender: string) => void;
+    socketDisconnected: (socketId: string) => void;
 }
 
 export interface ClientToServerEvents {
@@ -70,4 +71,5 @@ export interface PeerContextType {
     saveIceCandidate: (socketId: string, candidate: RTCIceCandidate) => Promise<void>;
     stopStream: (socket: Socket<ServerToClientEvents, ClientToServerEvents>) => void;
     clearTracks: (to: string) => void;
+    removePeer: (socketId: string) => void;
 }
