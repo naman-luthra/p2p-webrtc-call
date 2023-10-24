@@ -46,6 +46,7 @@ export default function Room({}){
     const [ audioPlaying, setAudioPlaying ] = useState<boolean[]>([]);
 
     useEffect(()=>{
+        if(!remoteStreams) return;
         remoteStreams?.forEach((stream, id)=>{
             const remoteVideo = document.getElementById(`remoteVideo${id}`) as HTMLVideoElement;
             const remoteAudio = document.getElementById(`remoteAudio${id}`) as HTMLAudioElement;
@@ -54,6 +55,8 @@ export default function Room({}){
             }
             if(remoteAudio){
                 remoteAudio.srcObject = stream;
+                if(!audioPlaying[id]) remoteAudio.pause();
+                else remoteAudio.play();
             }
         });
         return ()=>{
@@ -68,7 +71,7 @@ export default function Room({}){
                 }
             });
         }
-    },[remoteStreams]);
+    },[remoteStreams, audioPlaying]);
 
     useEffect(()=>{
         console.log("audio playing", audioPlaying);
@@ -115,10 +118,9 @@ export default function Room({}){
                                 <div className="h-full w-full absolute top-0 right-0 flex justify-center items-center">
                                     <button onClick={
                                         ()=>{
-                                            const audio = document.getElementById(`remoteAudio${id}`) as HTMLAudioElement;
                                             setAudioPlaying(prev=>{
                                                 const newAudioPlaying = [...prev];
-                                                newAudioPlaying[id] = audio.paused;
+                                                newAudioPlaying[id] = !newAudioPlaying[id];
                                                 return newAudioPlaying;
                                             });
                                         }
