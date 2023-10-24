@@ -299,8 +299,8 @@ export default function Room({}) {
             <div className="pt-4 flex flex-col gap-2 overflow-y-auto text-sm">
             {
                 peerContext?.chatHistory.map(({message, sender, time}, id)=>(
-                    <div>
-                        <div key={id} className="flex gap-1">
+                    <div key={id}>
+                        <div className="flex gap-1">
                         <span className="font-semibold">{sender}</span>
                         <span>{time.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
