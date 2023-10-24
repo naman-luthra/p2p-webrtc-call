@@ -15,8 +15,11 @@ export default function Room({}){
     const peerContext = useContext(PeerContext);
 
     const videoRef = useRef<HTMLVideoElement>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
+
     const [video, setVideo] = useState<MediaStream | null>(null);
     const [audio, setAudio] = useState<MediaStream | null>(null);
+    const [presentation, setPresentation] = useState<MediaStream | null>(null);
 
     const handleVideoOn = ()=>{
         navigator.mediaDevices.getUserMedia({video: true, audio: false}).then(stream=>{
@@ -40,6 +43,33 @@ export default function Room({}){
         if(socket) peerContext?.stopStream(socket, 'audio');
         setAudio(null);
     };
+    const handlePresentationOff = ()=>{
+        presentation?.getTracks().forEach(track=>track.stop());
+        if(socket) peerContext?.stopStream(socket, 'presentation');
+        if(audioRef.current){
+            audioRef.current.pause();
+            audioRef.current.srcObject = null;
+        }
+        setPresentation(null);
+    };
+
+    const handlePresentationOn = ()=>{
+        navigator.mediaDevices.getDisplayMedia({video: true, audio: true}).then(stream=>{
+            setPresentation(stream);
+            stream.getTracks().forEach(track=>{
+                if(track.kind === 'video'){
+                    track.addEventListener('ended', handlePresentationOff);
+                }
+            });
+            if(audioRef.current){
+                audioRef.current.srcObject = stream;
+                audioRef.current.play();
+            }
+            handleAudioOff();
+            handleVideoOff();
+            peerContext?.sendStream(stream);
+        });
+    };
 
     useEffect(()=>{
         if(!socket || !id) return;
@@ -51,8 +81,9 @@ export default function Room({}){
 
     useEffect(() => {
         if(!videoRef.current) return;
-        videoRef.current.srcObject = video;
-    }, [video]);
+        if(presentation) videoRef.current.srcObject = presentation;
+        else videoRef.current.srcObject = video;
+    }, [video, presentation]);
 
     const remoteStreams = peerContext?.peers.map(({stream})=>stream);
 
@@ -111,9 +142,10 @@ export default function Room({}){
             }}>
             <div className="w-full h-full relative group rounded-lg bg-white bg-opacity-20">
                 <video id="localVideo" ref={videoRef} autoPlay muted className="w-full h-full relative"/>
+                <audio id="localAudio" ref={audioRef} className="hidden"></audio>
                 <div className="w-full h-full absolute top-0 left-0 flex justify-center items-center">
                     {
-                        !video && (
+                        (!video && !presentation) && (
                             <FaUser className="w-16 h-16"/>
                         )
                     }
@@ -181,6 +213,17 @@ export default function Room({}){
                 ) : (
                     <button onClick={handleAudioOn} className="p-2 bg-gray-300 rounded-full hover:opacity-90">
                         <MdMicOff className="w-6 h-6"/>
+                    </button>
+                )
+            }
+            {
+                presentation ? (
+                    <button onClick={handlePresentationOff} className="p-2 bg-gray-700 text-gray-100 rounded-full hover:opacity-90">
+                        Stop Presentation
+                    </button>
+                ) : (
+                    <button onClick={handlePresentationOn} className="p-2 bg-gray-300 rounded-full hover:opacity-90">
+                        Start Presentation
                     </button>
                 )
             }

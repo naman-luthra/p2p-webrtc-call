@@ -150,26 +150,32 @@ export const PeerProvider = (props: {
         setMyStream(stream);
     }
 
-    const stopStream = async (socket: Socket<ServerToClientEvents, ClientToServerEvents>, type: 'audio' | 'video') => {
+    const stopStream = async (socket: Socket<ServerToClientEvents, ClientToServerEvents>, type: 'audio' | 'video' | 'presentation') => {
         peers.forEach(({socketId}) => {
             socket.emit("streamStopped", socketId, type);
         });
         setMyStream(null);
     }
 
-    const clearTracks = async (socketId: string, type: 'audio' | 'video') => {
+    const clearTracks = async (socketId: string, type: 'audio' | 'video' | 'presentation') => {
         console.log("clear tracks", socketId);
         setPeers(prev=>{
             const newPeers = prev.map(peer=>{
                 if(peer.socketId === socketId){
                     const newTracks: MediaStreamTrack[] = [];
                     peer.stream?.getTracks().forEach(track=>{
-                        if(track.kind === type)
+                        if(type==='presentation') track.stop();
+                        else if(track.kind === type)
                             track.stop();
                         else newTracks.push(track);
                     });
                     peer.stream = new MediaStream(newTracks);
-                    peer[type] = false;
+                    if(type==='audio') peer.audio = false;
+                    else if(type==='video') peer.video = false;
+                    else if(type==='presentation'){
+                        peer.audio = false;
+                        peer.video = false;
+                    }
                 }
                 return peer;
             })

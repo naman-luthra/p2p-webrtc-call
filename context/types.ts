@@ -26,7 +26,7 @@ export interface ServerToClientEvents {
         candidate: RTCIceCandidate,
         sender: string
     }) => void;
-    clearTracks: (sender: string, type: 'audio' | 'video') => void;
+    clearTracks: (sender: string, type: 'audio' | 'video' | 'presentation') => void;
     socketDisconnected: (socketId: string) => void;
 }
 
@@ -51,7 +51,7 @@ export interface ClientToServerEvents {
         candidate: RTCIceCandidate,
         to: string
     }) => void;
-    streamStopped: (to: string, type: 'audio' | 'video') => void;
+    streamStopped: (to: string, type: 'audio' | 'video' | 'presentation') => void;
 }
 
 export interface Peer {
@@ -72,7 +72,7 @@ export interface PeerContextType {
     saveOfferAndCreateAnswer: (d: string | RTCPeerConnection, offer: RTCSessionDescriptionInit) => Promise<RTCSessionDescriptionInit | undefined>;
     saveAnswer: (socketId: string, answer: RTCSessionDescriptionInit) => Promise<void>;
     saveIceCandidate: (socketId: string, candidate: RTCIceCandidate) => Promise<void>;
-    stopStream: (socket: Socket<ServerToClientEvents, ClientToServerEvents>, type: 'audio' | 'video') => void;
+    stopStream: (socket: Socket<ServerToClientEvents, ClientToServerEvents>, type: 'audio' | 'video' | 'presentation') => void;
     clearTracks: (to: string, type: 'audio' | 'video') => void;
     removePeer: (socketId: string) => void;
 }
