@@ -10,6 +10,12 @@ export const PeerProvider = (props: {
     const [peers, setPeers] = useState<Peer[]>([]);
     const [myStream, setMyStream] = useState<MediaStream | null>(null);
 
+    const [chatHistory, setChatHistory] = useState<{
+        message: string,
+        sender: string,
+        time: Date
+    }[]>([]);
+
     const getPeerBySocketId = (socketId: string) => {
         return peers.find(peer=>peer.socketId === socketId)?.peer;
     }
@@ -183,6 +189,21 @@ export const PeerProvider = (props: {
         });
     }
 
+    const sendChat = (socket: Socket<ServerToClientEvents, ClientToServerEvents>, message: string) => {
+        setChatHistory(prev=>[...prev, {sender: "You", message, time: new Date()}]);
+        peers.forEach(({socketId}) => {
+            socket.emit("chatSend", socketId, message);
+        });
+    }
+
+    const receiveChat = (sender: string, message: string) => {
+        setChatHistory(prev=>[...prev, {
+            sender: peers.find(peer=>peer.socketId === sender)?.name || 'Unknown',
+            message,
+            time: new Date()
+        }]);
+    }
+
     const removePeer = (socketId: string) => {
         setPeers(prev=>{
             const newPeers = prev.filter(peer=>peer.socketId !== socketId);
@@ -202,7 +223,10 @@ export const PeerProvider = (props: {
             myStream,
             stopStream,
             clearTracks,
-            removePeer
+            removePeer,
+            chatHistory,
+            sendChat,
+            receiveChat
         }}>
             {props.children}
         </PeerContext.Provider>

@@ -28,6 +28,10 @@ export interface ServerToClientEvents {
     }) => void;
     clearTracks: (sender: string, type: 'audio' | 'video' | 'presentation') => void;
     socketDisconnected: (socketId: string) => void;
+    chatReceive: (messageWithSender: {
+        sender: string,
+        message: string
+    }) => void;
 }
 
 export interface ClientToServerEvents {
@@ -52,6 +56,7 @@ export interface ClientToServerEvents {
         to: string
     }) => void;
     streamStopped: (to: string, type: 'audio' | 'video' | 'presentation') => void;
+    chatSend: (to: string, message: string) => void;
 }
 
 export interface Peer {
@@ -75,4 +80,11 @@ export interface PeerContextType {
     stopStream: (socket: Socket<ServerToClientEvents, ClientToServerEvents>, type: 'audio' | 'video' | 'presentation') => void;
     clearTracks: (to: string, type: 'audio' | 'video') => void;
     removePeer: (socketId: string) => void;
+    chatHistory: {
+        message: string,
+        sender: string,
+        time: Date
+    }[];
+    sendChat: (socket: Socket<ServerToClientEvents, ClientToServerEvents>, message: string) => void;
+    receiveChat: (socketId: string, message: string) => void;
 }

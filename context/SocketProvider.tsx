@@ -81,6 +81,11 @@ export const SocketProvider = (props: {
     const handleSocketDisconnect = useCallback(async (socketId: string)=>{
         peerContext?.removePeer(socketId);
     },[]);
+
+    const handleReceiveChat = useCallback(async (messageWithSender: {sender: string, message: string})=>{
+        console.log("receive chat", messageWithSender.sender, messageWithSender.message);
+        peerContext?.receiveChat(messageWithSender.sender, messageWithSender.message);
+    },[]);
     
 
     useEffect(() => {
@@ -92,6 +97,7 @@ export const SocketProvider = (props: {
         socket.on("saveIceCandidate", handleSaveIceCandidate);
         socket.on("clearTracks", handleClearTracks);
         socket.on("socketDisconnected", handleSocketDisconnect);
+        socket.on("receiveChat", handleReceiveChat);
     
         return () => {
             socket.off("createOffers", handleCreateOffers);
@@ -102,6 +108,7 @@ export const SocketProvider = (props: {
             socket.off("saveIceCandidate", handleSaveIceCandidate);
             socket.off("clearTracks", handleClearTracks);
             socket.off("socketDisconnected", handleSocketDisconnect);
+            socket.off("receiveChat", handleReceiveChat);
         };
       }, [
         socket,
