@@ -2,8 +2,9 @@
 import { PeerContext } from "@/context/PeersProvider";
 import { SocketContext } from "@/context/SocketProvider";
 import { useRouter } from "next/router";
-import { use, useContext, useEffect, useRef, useState } from "react";
-import ReactPlayer from "react-player";
+import { useContext, useEffect, useRef, useState } from "react";
+import { MdMic, MdMicOff, MdVideocam, MdVideocamOff } from "react-icons/md";
+import { FaUser } from "react-icons/fa";
 
 export default function Room({}){
     console.log("rendered");
@@ -15,17 +16,29 @@ export default function Room({}){
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const [video, setVideo] = useState<MediaStream | null>(null);
+    const [audio, setAudio] = useState<MediaStream | null>(null);
 
     const handleVideoOn = ()=>{
-        navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(stream=>{
+        navigator.mediaDevices.getUserMedia({video: true, audio: false}).then(stream=>{
             setVideo(stream)
             peerContext?.sendStream(stream);
         });
     };
     const handleVideoOff = ()=>{
         video?.getTracks().forEach(track=>track.stop());
-        if(socket) peerContext?.stopStream(socket);
+        if(socket) peerContext?.stopStream(socket, 'video');
         setVideo(null);
+    };
+    const handleAudioOn = ()=>{
+        navigator.mediaDevices.getUserMedia({video: false, audio: true}).then(stream=>{
+            setAudio(stream)
+            peerContext?.sendStream(stream);
+        });
+    };
+    const handleAudioOff = ()=>{
+        audio?.getTracks().forEach(track=>track.stop());
+        if(socket) peerContext?.stopStream(socket, 'audio');
+        setAudio(null);
     };
 
     useEffect(()=>{
@@ -91,25 +104,29 @@ export default function Room({}){
     console.log(peerContext?.peers);
 
     return (
-        <div className="grid w-full h-screen gap-4 p-4" style={{
+        <div className="w-full h-screen p-4 flex flex-col gap-4 bg-black opacity-95">
+        <div className="grid w-full gap-4 h-[85vh]" style={{
             gridTemplateColumns: `repeat(${!peerContext?.peers.length ? 1 : peerContext?.peers.length<4 ? 2 : 3}, minmax(0, 1fr))`,
             gridTemplateRows: `repeat(${!peerContext?.peers.length ? 1 : peerContext?.peers.length<2 ? 1 : 2}, minmax(0, 1fr))`
             }}>
-            <div className="w-full h-full relative group rounded-lg border-sky-500 border-4">
+            <div className="w-full h-full relative group rounded-lg bg-white bg-opacity-20">
                 <video id="localVideo" ref={videoRef} autoPlay muted className="w-full h-full relative"/>
-                <div className="absolute z-10 top-0 left-0 w-full h-full flex justify-center items-center">
+                <div className="w-full h-full absolute top-0 left-0 flex justify-center items-center">
                     {
-                        video ? (
-                            <button onClick={handleVideoOff} className="px-3 py-1 border border-gray-800 rounded-lg hidden group-hover:block">Stop Video</button>
-                        ) : (
-                            <button onClick={handleVideoOn} className="px-3 py-1 border border-gray-800 rounded-lg">Start Video</button>
+                        !video && (
+                            <FaUser className="w-16 h-16"/>
+                        )
+                    }
+                    {
+                        !audio && (
+                            <MdMicOff className="w-6 h-6 absolute right-2 top-2"/>
                         )
                     }
                 </div>
             </div>
             {
                 peerContext?.peers.map(({stream},id)=>(
-                    <div key={id} className="w-full h-full relative group rounded-lg border-sky-500 border-4">
+                    <div key={id} className="w-full h-full relative group rounded-lg bg-white bg-opacity-20">
                         {
                             (stream) &&
                             <>
@@ -120,19 +137,54 @@ export default function Room({}){
                                         ()=>{
                                             setAudioPlaying(prev=>{
                                                 const newAudioPlaying = [...prev];
-                                                newAudioPlaying[id] = !newAudioPlaying[id];
+                                                newAudioPlaying[id] = true;
                                                 return newAudioPlaying;
                                             });
                                         }
-                                    } className={`bg-sky-600 px-4 py-2 rounded-2xl text-white text-xl font-semibold`}>{
-                                        audioPlaying[id] ? 'Mute' : 'Unmute'
+                                    } className={`bg-sky-600 px-4 py-2 rounded-2xl text-white text-xl font-semibold absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${audioPlaying[id] ? 'hidden': 'block'}`}>{
+                                        'Allow Sound'
                                     }</button>
+                                    {
+                                        !peerContext.peers[id].video && (
+                                            <FaUser className="w-16 h-16"/>
+                                        )
+                                    }
+                                    {
+                                        !peerContext.peers[id].audio && (
+                                            <MdMicOff className="w-6 h-6 absolute right-2 top-2"/>
+                                        )
+                                    }
                                 </div>
                             </>
                         }
                     </div>
                 ))
             }
+        </div>
+        <div className="grow flex items-center justify-center gap-4">
+            {
+                video ? (
+                    <button onClick={handleVideoOff} className="p-2 bg-gray-700 text-gray-100  rounded-full hover:opacity-90">
+                        <MdVideocam className="w-6 h-6"/>
+                    </button>
+                ) : (
+                    <button onClick={handleVideoOn} className="p-2 bg-gray-300 rounded-full hover:opacity-90">
+                        <MdVideocamOff className="w-6 h-6"/>
+                    </button>
+                )
+            }
+            {
+                audio ? (
+                    <button onClick={handleAudioOff} className="p-2 bg-gray-700 text-gray-100 rounded-full hover:opacity-90">
+                        <MdMic className="w-6 h-6"/>
+                    </button>
+                ) : (
+                    <button onClick={handleAudioOn} className="p-2 bg-gray-300 rounded-full hover:opacity-90">
+                        <MdMicOff className="w-6 h-6"/>
+                    </button>
+                )
+            }
+        </div>
         </div>
     );
 }

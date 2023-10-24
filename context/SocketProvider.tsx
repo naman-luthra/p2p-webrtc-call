@@ -73,9 +73,9 @@ export const SocketProvider = (props: {
         await peerContext?.saveIceCandidate(candidateWithPeer.sender, candidateWithPeer.candidate);
     },[peerContext]);
 
-    const handleClearTracks = useCallback(async (socketId: string)=>{
+    const handleClearTracks = useCallback(async (socketId: string, type: 'audio' | 'video')=>{
         console.log("clear tracks", socketId);
-        peerContext?.clearTracks(socketId);
+        peerContext?.clearTracks(socketId, type);
     },[])
 
     const handleSocketDisconnect = useCallback(async (socketId: string)=>{

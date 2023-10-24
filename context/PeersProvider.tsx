@@ -22,6 +22,10 @@ export const PeerProvider = (props: {
                 if(peer.socketId === socketId){
                     if(!peer.stream) peer.stream = new MediaStream();
                     event.streams[0].getTracks().forEach((track) => {
+                        if(track.kind === "audio")
+                            peer.audio = true;
+                        else if(track.kind === "video")
+                            peer.video = true;
                         peer.stream?.addTrack(track);
                     });
                     console.log(peer.stream?.getTracks());
@@ -81,7 +85,14 @@ export const PeerProvider = (props: {
         peer.addEventListener("negotiationneeded", () => handleNegoInit(peer, socketId, socket));
         peer.addEventListener("track", (event) => handleTrackEvent(event, socketId, socket));
         setPeers(prev=>{
-            return [...prev, {socketId, peer, stream: null}];
+            return [...prev, {
+                name: "New Peer",
+                socketId, 
+                peer,
+                stream: new MediaStream(),
+                audio: false,
+                video: false
+            }];
         });
         return peer;
     };
@@ -139,20 +150,26 @@ export const PeerProvider = (props: {
         setMyStream(stream);
     }
 
-    const stopStream = async (socket: Socket<ServerToClientEvents, ClientToServerEvents>) => {
+    const stopStream = async (socket: Socket<ServerToClientEvents, ClientToServerEvents>, type: 'audio' | 'video') => {
         peers.forEach(({socketId}) => {
-            socket.emit("streamStopped", socketId);
+            socket.emit("streamStopped", socketId, type);
         });
         setMyStream(null);
     }
 
-    const clearTracks = async (socketId: string) => {
+    const clearTracks = async (socketId: string, type: 'audio' | 'video') => {
         console.log("clear tracks", socketId);
         setPeers(prev=>{
             const newPeers = prev.map(peer=>{
                 if(peer.socketId === socketId){
-                    peer.stream?.getTracks().forEach(track=>track.stop());
-                    peer.stream = null;
+                    const newTracks: MediaStreamTrack[] = [];
+                    peer.stream?.getTracks().forEach(track=>{
+                        if(track.kind === type)
+                            track.stop();
+                        else newTracks.push(track);
+                    });
+                    peer.stream = new MediaStream(newTracks);
+                    peer[type] = false;
                 }
                 return peer;
             })
