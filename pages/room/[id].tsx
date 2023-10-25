@@ -173,23 +173,6 @@ export default function Room({}) {
       }
     });
     if(changed) streamsRendered();
-    
-    // return () => {
-    //   remoteStreams?.forEach((_, id) => {
-    //     const remoteVideo = document.getElementById(
-    //       `remoteVideo${id}`
-    //     ) as HTMLVideoElement;
-    //     const remoteAudio = document.getElementById(
-    //       `remoteAudio${id}`
-    //     ) as HTMLAudioElement;
-    //     if (remoteVideo) {
-    //       remoteVideo.srcObject = null;
-    //     }
-    //     if (remoteAudio) {
-    //       remoteAudio.srcObject = null;
-    //     }
-    //   });
-    // };
   }, [remoteStreams, audioPlaying, streamsRendered]);
 
   useEffect(() => {
