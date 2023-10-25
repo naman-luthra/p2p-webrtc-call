@@ -234,7 +234,10 @@ export default function Room({}) {
                     user?.image ? (
                         <Image
                           src={user?.image.replace("s96-c", "s384-c")}
-                          className="w-36 h-36 rounded-full"
+                          className="rounded-full"
+                          unoptimized
+                          width={144}
+                          height={144}
                           alt={`${user?.name}'s Image`}
                         />
                     ) : (
@@ -288,7 +291,10 @@ export default function Room({}) {
                        peerContext.peers[id].user?.image ? (
                         <Image
                           src={peerContext.peers[id].user?.image.replace("s96-c", "s384-c") || ""}
-                          className="w-36 h-36 rounded-full"
+                          className="rounded-full"
+                          unoptimized
+                          width={144}
+                          height={144}
                           alt={`${peerContext.peers[id].user?.name}'s Image`}
                         />
                         ) : (
