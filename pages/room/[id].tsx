@@ -3,7 +3,7 @@ import { PeerContext } from "@/context/PeersProvider";
 import { SocketContext } from "@/context/SocketProvider";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useRef, useState } from "react";
-import { MdChat, MdMic, MdMicOff, MdSend, MdVideocam, MdVideocamOff } from "react-icons/md";
+import { MdCancel, MdChat, MdMic, MdMicOff, MdSend, MdVideocam, MdVideocamOff } from "react-icons/md";
 import { FaUser } from "react-icons/fa";
 import { Chat } from "@/context/types";
 import { useUser } from "@/context/UserProvider";
@@ -11,21 +11,33 @@ import Image from "next/image";
 
 function ChatBar({
     chatHistory,
-    handleChatSend
+    handleChatSend,
+    chatVisible,
+    setChatVisible
 }: {
     chatHistory: Chat[],
-    handleChatSend: (chatInput: string)=>void
+    handleChatSend: (chatInput: string)=>void,
+    chatVisible: boolean,
+    setChatVisible: (visible: boolean)=>void
 }){
     const [chatInput, setChatInput] = useState<string>("");
     const handleSend = () => {
         handleChatSend(chatInput);
+        setTimeout(() =>{
+          const chatBar = document.getElementById("chatBar");
+        if(chatBar!=null)
+            chatBar.scrollTop = chatBar.scrollHeight;
+        }, 100)
         setChatInput("");
     };
     return (
         <>
-            <div className="h-[85vh]">
-                <div className="font-semibold text-xl pt-2">Chat</div>
-                <div className="pt-4 flex flex-col gap-2 overflow-y-auto text-sm">
+            <div className="h-[85vh] relative" style={{display: chatVisible ? 'block' : 'none'}}>
+                <div className="flex justify-between pt-2">
+                  <div className="font-semibold text-xl">Chat</div>
+                  <MdCancel className="w-6 h-6 cursor-pointer hover:opacity-90" onClick={()=>{setChatVisible(false)}}/>
+                </div>
+                <div id="chatBar" className="pt-4 flex flex-col gap-2 max-h-[80vh] overflow-y-auto text-sm">
                 {
                     chatHistory.map(({message, sender, time}, id)=>(
                         <div key={id}>
@@ -39,7 +51,7 @@ function ChatBar({
                 }
                 </div>
             </div>
-            <div className="grow flex items-center">
+            <div className="grow items-center" style={{display: chatVisible ? 'flex' : 'none'}}>
                 <div className="w-full flex h-10 py-1 px-2 justify-center items-center rounded-lg bg-gray-200">
                     <input type="text" onKeyDown={e=>{
                         if(e.key === 'Enter') handleSend();
@@ -365,14 +377,14 @@ export default function Room({}) {
           )}
           <button
                 onClick={() => setChatVisible((prev) => !prev)}
-                className="p-2 bg-gray-300 rounded-y-full rounded-l-full ml-auto pr-4 absolute -right-4 top-1/2 -translate-y-1/2"
+                className="p-2 bg-gray-300 rounded-y-full rounded-l-full ml-auto absolute -right-4 top-1/2 -translate-y-1/2"
             >
                 <MdChat className="w-6 h-6" />
           </button>
         </div>
       </div>
-      <div className={`bg-gray-300 relative transition-all duration-100 p-4 flex flex-col gap-4 w-96 ${chatVisible ? 'block' : 'hidden'}`}>
-        <ChatBar chatHistory={peerContext?.chatHistory || []} handleChatSend={handleChatSend}/>
+      <div className={`bg-gray-300 relative transition-all duration-200 flex flex-col gap-4 overflow-hidden ${chatVisible ? 'w-96 p-4' : 'w-0'}`}>
+        <ChatBar chatVisible={chatVisible} setChatVisible={setChatVisible} chatHistory={peerContext?.chatHistory || []} handleChatSend={handleChatSend}/>
       </div>
     </div>
   );
