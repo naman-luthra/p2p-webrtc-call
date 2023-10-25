@@ -64,8 +64,20 @@ export interface Peer {
     socketId: string;
     peer: RTCPeerConnection;
     stream: MediaStream | null;
-    audio: boolean;
-    video: boolean;
+    audio: {
+        playing: boolean;
+        changed: boolean;
+    };
+    video: {
+        playing: boolean;
+        changed: boolean;
+    };
+}
+
+export interface Chat {
+    message: string,
+    sender: string,
+    time: Date
 }
 
 export interface PeerContextType {
@@ -80,11 +92,8 @@ export interface PeerContextType {
     stopStream: (socket: Socket<ServerToClientEvents, ClientToServerEvents>, type: 'audio' | 'video' | 'presentation') => void;
     clearTracks: (to: string, type: 'audio' | 'video') => void;
     removePeer: (socketId: string) => void;
-    chatHistory: {
-        message: string,
-        sender: string,
-        time: Date
-    }[];
+    chatHistory: Chat[];
     sendChat: (socket: Socket<ServerToClientEvents, ClientToServerEvents>, message: string) => void;
     receiveChat: (socketId: string, message: string) => void;
+    streamsUpdatesRendered: () => void;
 }

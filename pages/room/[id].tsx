@@ -5,6 +5,49 @@ import { useRouter } from "next/router";
 import { useContext, useEffect, useRef, useState } from "react";
 import { MdChat, MdMic, MdMicOff, MdSend, MdVideocam, MdVideocamOff } from "react-icons/md";
 import { FaUser } from "react-icons/fa";
+import { Chat } from "@/context/types";
+
+function ChatBar({
+    chatHistory,
+    handleChatSend
+}: {
+    chatHistory: Chat[],
+    handleChatSend: (chatInput: string)=>void
+}){
+    const [chatInput, setChatInput] = useState<string>("");
+    const handleSend = () => {
+        handleChatSend(chatInput);
+        setChatInput("");
+    };
+    return (
+        <>
+            <div className="h-[85vh]">
+                <div className="font-semibold text-xl pt-2">Chat</div>
+                <div className="pt-4 flex flex-col gap-2 overflow-y-auto text-sm">
+                {
+                    chatHistory.map(({message, sender, time}, id)=>(
+                        <div key={id}>
+                            <div className="flex gap-1">
+                            <span className="font-semibold">{sender}</span>
+                            <span>{time.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <div className="pl-0.5">{message}</div>
+                        </div>
+                    ))
+                }
+                </div>
+            </div>
+            <div className="grow flex items-center">
+                <div className="w-full flex h-10 py-1 px-2 justify-center items-center rounded-lg bg-gray-200">
+                    <input type="text" onKeyDown={e=>{
+                        if(e.key === 'Enter') handleSend();
+                    }} value={chatInput} onChange={e=>setChatInput(e.target.value)} className="grow bg-gray-200 focus:outline-none"/>
+                    <MdSend onClick={handleSend} className="w-6 h-6 hover:opacity-90"/>
+                </div>
+            </div>
+        </>
+    );
+}
 
 export default function Room({}) {
   console.log("rendered");
@@ -22,7 +65,6 @@ export default function Room({}) {
   const [presentation, setPresentation] = useState<MediaStream | null>(null);
 
   const [chatVisible, setChatVisible] = useState<boolean>(false);
-  const [chatInput, setChatInput] = useState<string>("");
 
   const handleVideoOn = () => {
     navigator.mediaDevices
@@ -80,11 +122,10 @@ export default function Room({}) {
       });
   };
 
-  const handleChatSend = () => {
+  const handleChatSend = (chatInput: string) => {
     if(!chatInput) return;
     if(!socket) return;
     peerContext?.sendChat(socket, chatInput);
-    setChatInput("");
   }
 
   useEffect(() => {
@@ -101,48 +142,57 @@ export default function Room({}) {
     else videoRef.current.srcObject = video;
   }, [video, presentation]);
 
-  const remoteStreams = peerContext?.peers.map(({ stream }) => stream);
+  const remoteStreams = peerContext?.peers.map(({ stream, audio, video }) => ({
+    stream,
+    audio,
+    video
+  }));
 
   const [audioPlaying, setAudioPlaying] = useState<boolean[]>([]);
+  const streamsRendered = peerContext?.streamsUpdatesRendered || (()=>{});
 
   useEffect(() => {
     if (!remoteStreams) return;
-    remoteStreams?.forEach((stream, id) => {
+    let changed = false;
+    remoteStreams?.forEach(({stream,audio,video}, id) => {
       const remoteVideo = document.getElementById(
         `remoteVideo${id}`
       ) as HTMLVideoElement;
       const remoteAudio = document.getElementById(
         `remoteAudio${id}`
       ) as HTMLAudioElement;
-      if (remoteVideo) {
+      if (remoteVideo && video.changed) {
         remoteVideo.srcObject = stream;
+        changed = true;
       }
-      if (remoteAudio) {
+      if (remoteAudio && audio.changed) {
         remoteAudio.srcObject = stream;
+        changed = true;
         if (!audioPlaying[id]) remoteAudio.pause();
         else remoteAudio.play();
       }
     });
-    return () => {
-      remoteStreams?.forEach((_, id) => {
-        const remoteVideo = document.getElementById(
-          `remoteVideo${id}`
-        ) as HTMLVideoElement;
-        const remoteAudio = document.getElementById(
-          `remoteAudio${id}`
-        ) as HTMLAudioElement;
-        if (remoteVideo) {
-          remoteVideo.srcObject = null;
-        }
-        if (remoteAudio) {
-          remoteAudio.srcObject = null;
-        }
-      });
-    };
-  }, [remoteStreams, audioPlaying]);
+    if(changed) streamsRendered();
+    
+    // return () => {
+    //   remoteStreams?.forEach((_, id) => {
+    //     const remoteVideo = document.getElementById(
+    //       `remoteVideo${id}`
+    //     ) as HTMLVideoElement;
+    //     const remoteAudio = document.getElementById(
+    //       `remoteAudio${id}`
+    //     ) as HTMLAudioElement;
+    //     if (remoteVideo) {
+    //       remoteVideo.srcObject = null;
+    //     }
+    //     if (remoteAudio) {
+    //       remoteAudio.srcObject = null;
+    //     }
+    //   });
+    // };
+  }, [remoteStreams, audioPlaying, streamsRendered]);
 
   useEffect(() => {
-    console.log("audio playing", audioPlaying);
     audioPlaying.forEach((playing, id) => {
       const remoteAudio = document.getElementById(
         `remoteAudio${id}`
@@ -227,10 +277,10 @@ export default function Room({}) {
                     >
                       {"Allow Sound"}
                     </button>
-                    {!peerContext.peers[id].video && (
+                    {!peerContext.peers[id].video.playing && (
                       <FaUser className="w-16 h-16" />
                     )}
-                    {!peerContext.peers[id].audio && (
+                    {!peerContext.peers[id].audio.playing && (
                       <MdMicOff className="w-6 h-6 absolute right-2 top-2" />
                     )}
                   </div>
@@ -294,30 +344,7 @@ export default function Room({}) {
         </div>
       </div>
       <div className={`bg-gray-300 relative transition-all duration-100 p-4 flex flex-col gap-4 w-96 ${chatVisible ? 'block' : 'hidden'}`}>
-        <div className="h-[85vh]">
-            <div className="font-semibold text-xl pt-2">Chat</div>
-            <div className="pt-4 flex flex-col gap-2 overflow-y-auto text-sm">
-            {
-                peerContext?.chatHistory.map(({message, sender, time}, id)=>(
-                    <div key={id}>
-                        <div className="flex gap-1">
-                        <span className="font-semibold">{sender}</span>
-                        <span>{time.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <div className="pl-0.5">{message}</div>
-                    </div>
-                ))
-            }
-            </div>
-        </div>
-        <div className="grow flex items-center">
-            <div className="w-full flex h-10 py-1 px-2 justify-center items-center rounded-lg bg-gray-200">
-                <input type="text" onKeyDown={e=>{
-                    if(e.key === 'Enter') handleChatSend();
-                }} value={chatInput} onChange={e=>setChatInput(e.target.value)} className="grow bg-gray-200 focus:outline-none"/>
-                <MdSend onClick={handleChatSend} className="w-6 h-6 hover:opacity-90"/>
-            </div>
-        </div>
+        <ChatBar chatHistory={peerContext?.chatHistory || []} handleChatSend={handleChatSend}/>
       </div>
     </div>
   );

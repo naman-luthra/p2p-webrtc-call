@@ -1,5 +1,5 @@
 import { Socket } from "socket.io-client";
-import { ClientToServerEvents, ServerToClientEvents, Peer, PeerContextType } from "./types";
+import { ClientToServerEvents, ServerToClientEvents, Peer, PeerContextType, Chat } from "./types";
 import { ReactNode, createContext, useState } from "react";
 
 export const PeerContext = createContext<PeerContextType | null>(null);
@@ -10,11 +10,7 @@ export const PeerProvider = (props: {
     const [peers, setPeers] = useState<Peer[]>([]);
     const [myStream, setMyStream] = useState<MediaStream | null>(null);
 
-    const [chatHistory, setChatHistory] = useState<{
-        message: string,
-        sender: string,
-        time: Date
-    }[]>([]);
+    const [chatHistory, setChatHistory] = useState<Chat[]>([]);
 
     const getPeerBySocketId = (socketId: string) => {
         return peers.find(peer=>peer.socketId === socketId)?.peer;
@@ -29,9 +25,15 @@ export const PeerProvider = (props: {
                     if(!peer.stream) peer.stream = new MediaStream();
                     event.streams[0].getTracks().forEach((track) => {
                         if(track.kind === "audio")
-                            peer.audio = true;
+                            peer.audio = {
+                                playing: true,
+                                changed: true
+                            };
                         else if(track.kind === "video")
-                            peer.video = true;
+                            peer.video = {
+                                playing: true,
+                                changed: true
+                            };
                         peer.stream?.addTrack(track);
                     });
                     console.log(peer.stream?.getTracks());
@@ -96,8 +98,14 @@ export const PeerProvider = (props: {
                 socketId, 
                 peer,
                 stream: new MediaStream(),
-                audio: false,
-                video: false
+                audio: {
+                    playing: false,
+                    changed: true
+                },
+                video: {
+                    playing: false,
+                    changed: true
+                }
             }];
         });
         return peer;
@@ -176,11 +184,23 @@ export const PeerProvider = (props: {
                         else newTracks.push(track);
                     });
                     peer.stream = new MediaStream(newTracks);
-                    if(type==='audio') peer.audio = false;
-                    else if(type==='video') peer.video = false;
+                    if(type==='audio') peer.audio = {
+                        playing: false,
+                        changed: true
+                    };
+                    else if(type==='video') peer.video = {
+                        playing: false,
+                        changed: true
+                    };
                     else if(type==='presentation'){
-                        peer.audio = false;
-                        peer.video = false;
+                        peer.audio = {
+                            playing: false,
+                            changed: true
+                        };
+                        peer.video = {
+                            playing: false,
+                            changed: true
+                        };
                     }
                 }
                 return peer;
@@ -202,6 +222,19 @@ export const PeerProvider = (props: {
             message,
             time: new Date()
         }]);
+    }
+
+    const streamsUpdatesRendered = () => {
+        setPeers(
+            prev=>{
+                const newPeers = prev.map(peer=>{
+                    peer.audio.changed = false;
+                    peer.video.changed = false;
+                    return peer;
+                });
+                return newPeers;
+            }
+        );
     }
 
     const removePeer = (socketId: string) => {
@@ -226,7 +259,8 @@ export const PeerProvider = (props: {
             removePeer,
             chatHistory,
             sendChat,
-            receiveChat
+            receiveChat,
+            streamsUpdatesRendered
         }}>
             {props.children}
         </PeerContext.Provider>
