@@ -6,6 +6,8 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { MdChat, MdMic, MdMicOff, MdSend, MdVideocam, MdVideocamOff } from "react-icons/md";
 import { FaUser } from "react-icons/fa";
 import { Chat } from "@/context/types";
+import { useUser } from "@/context/UserProvider";
+import Image from "next/image";
 
 function ChatBar({
     chatHistory,
@@ -53,6 +55,8 @@ export default function Room({}) {
   console.log("rendered");
   const router = useRouter();
   const { id } = router.query;
+
+  const user = useUser();
 
   const socket = useContext(SocketContext);
   const peerContext = useContext(PeerContext);
@@ -132,6 +136,7 @@ export default function Room({}) {
     if (!socket || !id) return;
     socket.emit("roomJoined", id as string);
     return () => {
+        console.log("unmount");
       socket.emit("roomLeft", id as string);
     };
   }, [socket, id]);
@@ -142,16 +147,15 @@ export default function Room({}) {
     else videoRef.current.srcObject = video;
   }, [video, presentation]);
 
-  const remoteStreams = peerContext?.peers.map(({ stream, audio, video }) => ({
-    stream,
-    audio,
-    video
-  }));
 
   const [audioPlaying, setAudioPlaying] = useState<boolean[]>([]);
-  const streamsRendered = peerContext?.streamsUpdatesRendered || (()=>{});
 
   useEffect(() => {
+    const remoteStreams = peerContext?.peers.map(({ stream, audio, video }) => ({
+        stream,
+        audio,
+        video
+    }));
     if (!remoteStreams) return;
     let changed = false;
     remoteStreams?.forEach(({stream,audio,video}, id) => {
@@ -172,8 +176,8 @@ export default function Room({}) {
         else remoteAudio.play();
       }
     });
-    if(changed) streamsRendered();
-  }, [remoteStreams, audioPlaying, streamsRendered]);
+    if(changed) peerContext?.streamsUpdatesRendered();
+  }, [audioPlaying, peerContext]);
 
   useEffect(() => {
     audioPlaying.forEach((playing, id) => {
@@ -223,11 +227,31 @@ export default function Room({}) {
               className="w-full h-full relative"
             />
             <audio id="localAudio" ref={audioRef} className="hidden"></audio>
-            <div className="w-full h-full absolute top-0 left-0 flex justify-center items-center">
-              {!video && !presentation && <FaUser className="w-16 h-16" />}
+            <div className="w-full h-full absolute top-0 left-0 flex justify-center items-center text-white">
+              {
+                (!video && !presentation) && 
+                (
+                    user?.image ? (
+                        <Image
+                          src={user?.image.replace("s96-c", "s384-c")}
+                          className="w-36 h-36 rounded-full"
+                          alt={`${user?.name}'s Image`}
+                        />
+                    ) : (
+                        <FaUser className="w-16 h-16" />
+                    )
+                )
+              }
               {!audio && (
                 <MdMicOff className="w-6 h-6 absolute right-2 top-2" />
               )}
+                {
+                    user?.name && (
+                        <div className="absolute bottom-4 left-4 font-semibold">
+                            {user?.name}
+                        </div>
+                    )
+                }
             </div>
           </div>
           {peerContext?.peers.map(({ stream }, id) => (
@@ -245,7 +269,7 @@ export default function Room({}) {
                     muted
                     className="w-full h-full"
                   ></video>
-                  <div className="h-full w-full absolute top-0 right-0 flex justify-center items-center">
+                  <div className="h-full w-full absolute top-0 right-0 flex justify-center items-center text-white">
                     <button
                       onClick={() => {
                         setAudioPlaying((prev) => {
@@ -254,18 +278,33 @@ export default function Room({}) {
                           return newAudioPlaying;
                         });
                       }}
-                      className={`bg-sky-600 px-4 py-2 rounded-2xl text-white text-xl font-semibold absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${
+                      className={`bg-sky-600 px-4 py-2 rounded-2xl text-xl font-semibold absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${
                         audioPlaying[id] ? "hidden" : "block"
                       }`}
                     >
                       {"Allow Sound"}
                     </button>
                     {!peerContext.peers[id].video.playing && (
-                      <FaUser className="w-16 h-16" />
+                       peerContext.peers[id].user?.image ? (
+                        <Image
+                          src={peerContext.peers[id].user?.image.replace("s96-c", "s384-c") || ""}
+                          className="w-36 h-36 rounded-full"
+                          alt={`${peerContext.peers[id].user?.name}'s Image`}
+                        />
+                        ) : (
+                        <FaUser className="w-16 h-16" />
+                        )
                     )}
                     {!peerContext.peers[id].audio.playing && (
                       <MdMicOff className="w-6 h-6 absolute right-2 top-2" />
                     )}
+                    {
+                        peerContext.peers[id]?.user?.name && (
+                            <div className="absolute bottom-4 left-4 font-semibold">
+                                {peerContext.peers[id]?.user?.name}
+                            </div>
+                        )
+                    }
                   </div>
                 </>
               )}

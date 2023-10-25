@@ -56,7 +56,11 @@ export const PeerProvider = (props: {
         socket.emit("negoOffer", {offer: offerDescription, to});
     };
 
-    const createPeer = (socketId: string, socket: Socket<ServerToClientEvents, ClientToServerEvents>) => {
+    const createPeer = (socketId: string, socket: Socket<ServerToClientEvents, ClientToServerEvents>, userDetails: {
+        name: string,
+        image: string,
+        email: string
+    } | null) => {
         const peer = new RTCPeerConnection({
             iceServers: [
                 {
@@ -94,7 +98,7 @@ export const PeerProvider = (props: {
         peer.addEventListener("track", (event) => handleTrackEvent(event, socketId, socket));
         setPeers(prev=>{
             return [...prev, {
-                name: "New Peer",
+                user: userDetails,
                 socketId, 
                 peer,
                 stream: new MediaStream(),
@@ -126,7 +130,11 @@ export const PeerProvider = (props: {
         }
     }
 
-    const saveOfferAndCreateAnswer = async (d: string | RTCPeerConnection, offer: RTCSessionDescriptionInit) => {
+    const saveOfferAndCreateAnswer = async (d: string | RTCPeerConnection, offer: RTCSessionDescriptionInit, senderDetails: {
+        name: string,
+        image: string,
+        email: string
+    } | null) => {
         let peer: RTCPeerConnection | undefined;
         if(typeof d === "string"){
             peer = getPeerBySocketId(d);
@@ -142,10 +150,25 @@ export const PeerProvider = (props: {
         }
     }
     
-    const saveAnswer = async (socketId: string, answer: RTCSessionDescriptionInit) => {
+    const saveAnswer = async (socketId: string, answer: RTCSessionDescriptionInit, userDetails: {
+        name: string,
+        image: string,
+        email: string
+    } | null) => {
         const peer = getPeerBySocketId(socketId);
         if(peer)
             await peer.setRemoteDescription(new RTCSessionDescription(answer));
+        if(userDetails){
+            setPeers(prev=>{
+                const newPeers = prev.map(peer=>{
+                    if(peer.socketId === socketId){
+                        peer.user = userDetails;
+                    }
+                    return peer;
+                });
+                return newPeers;
+            });
+        }
     }
 
     const saveIceCandidate = async (socketId: string, candidate: RTCIceCandidate) => {
@@ -217,8 +240,9 @@ export const PeerProvider = (props: {
     }
 
     const receiveChat = (sender: string, message: string) => {
+        console.log("message",sender,peers)
         setChatHistory(prev=>[...prev, {
-            sender: peers.find(peer=>peer.socketId === sender)?.name || 'Unknown',
+            sender: peers.find(peer=>peer.socketId === sender)?.user?.name || 'Unknown',
             message,
             time: new Date()
         }]);

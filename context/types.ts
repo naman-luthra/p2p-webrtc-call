@@ -8,11 +8,21 @@ export interface ServerToClientEvents {
     acceptOffer: (offerWithSender: {
         offer: RTCSessionDescriptionInit,
         sender: string,
+        senderDetails:{
+            name: string,
+            image: string,
+            email: string
+        },
         roomId: string
     }) => void;
     saveAnswer: (answerWithPeer: {
         answer: RTCSessionDescriptionInit,
-        sender: string
+        sender: string,
+        senderDetails:{
+            name: string,
+            image: string,
+            email: string
+        }
     }) => void;
     negoOfferAccept: (offerWithSender: {
         offer: RTCSessionDescriptionInit,
@@ -37,11 +47,27 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
     roomJoined: (roomId: string) => void;
     roomLeft: (roomId: string) => void;
-    offersCreated: (roomId: string, offers: {offer: RTCSessionDescriptionInit, to:string}[]) => void;
+    offersCreated: (
+        roomId: string, 
+        offers: {
+            offer: RTCSessionDescriptionInit, 
+            to:string,
+            senderDetails:{
+                name: string,
+                image: string,
+                email: string
+            }
+        }[]
+    ) => void;
     answerCreated: (answerWithReceiver: {
         roomId: string,
         answer: RTCSessionDescriptionInit,
-        receiver: string
+        receiver: string,
+        senderDetails:{
+            name: string,
+            image: string,
+            email: string
+        }
     }) => void;
     negoOffer: (offerWithReceiver: {
         offer: RTCSessionDescriptionInit,
@@ -60,7 +86,11 @@ export interface ClientToServerEvents {
 }
 
 export interface Peer {
-    name: string;
+    user: {
+        name: string,
+        image: string,
+        email: string
+    } | null;
     socketId: string;
     peer: RTCPeerConnection;
     stream: MediaStream | null;
@@ -84,10 +114,22 @@ export interface PeerContextType {
     peers: Peer[];
     myStream: MediaStream | null;
     sendStream: (stream: MediaStream) => void;
-    createPeer: (socketId: string, socket: Socket<ServerToClientEvents, ClientToServerEvents>) => RTCPeerConnection;
+    createPeer: (socketId: string, socket: Socket<ServerToClientEvents, ClientToServerEvents>, userDetails: {
+        name: string,
+        image: string,
+        email: string
+    } | null) => RTCPeerConnection;
     createOffer: (d: string | RTCPeerConnection) => Promise<RTCSessionDescriptionInit | undefined>;
-    saveOfferAndCreateAnswer: (d: string | RTCPeerConnection, offer: RTCSessionDescriptionInit) => Promise<RTCSessionDescriptionInit | undefined>;
-    saveAnswer: (socketId: string, answer: RTCSessionDescriptionInit) => Promise<void>;
+    saveOfferAndCreateAnswer: (d: string | RTCPeerConnection, offer: RTCSessionDescriptionInit, senderDetails:{
+        name: string,
+        image: string,
+        email: string
+    } | null) => Promise<RTCSessionDescriptionInit | undefined>;
+    saveAnswer: (socketId: string, answer: RTCSessionDescriptionInit, userDetails: {
+        name: string,
+        image: string,
+        email: string
+    } | null) => Promise<void>;
     saveIceCandidate: (socketId: string, candidate: RTCIceCandidate) => Promise<void>;
     stopStream: (socket: Socket<ServerToClientEvents, ClientToServerEvents>, type: 'audio' | 'video' | 'presentation') => void;
     clearTracks: (to: string, type: 'audio' | 'video') => void;
