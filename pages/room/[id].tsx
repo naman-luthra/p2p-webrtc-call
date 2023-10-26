@@ -366,7 +366,7 @@ export default function Room({}) {
           {peerContext?.peers.map(({ audio, video, user }, id) => (
             <Video
               videoId={`remoteVideo${id}`}
-              audioId={`remoteVideo${id}`}
+              audioId={`remoteAudio${id}`}
               streaming={{
                 audio: audio.playing,
                 video: video.playing,
