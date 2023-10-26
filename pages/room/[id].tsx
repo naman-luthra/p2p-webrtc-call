@@ -2,174 +2,18 @@
 import { PeerContext } from "@/context/PeersProvider";
 import { SocketContext } from "@/context/SocketProvider";
 import { useRouter } from "next/router";
-import { ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
-  MdCancel,
-  MdChat,
   MdChatBubble,
-  MdFullscreen,
-  MdFullscreenExit,
   MdMarkChatUnread,
   MdMic,
   MdMicOff,
-  MdSend,
   MdVideocam,
   MdVideocamOff,
 } from "react-icons/md";
-import { FaUser } from "react-icons/fa";
-import { Chat } from "@/context/types";
 import { useUser } from "@/context/UserProvider";
-import Image from "next/image";
-
-function ChatBar({
-  chatHistory,
-  handleChatSend,
-  chatVisible,
-  setChatVisible,
-}: {
-  chatHistory: Chat[];
-  handleChatSend: (chatInput: string) => void;
-  chatVisible: boolean;
-  setChatVisible: (visible: boolean) => void;
-}) {
-  const [chatInput, setChatInput] = useState<string>("");
-  const handleSend = () => {
-    handleChatSend(chatInput);
-    setTimeout(() => {
-      const chatBar = document.getElementById("chatBar");
-      if (chatBar != null) chatBar.scrollTop = chatBar.scrollHeight;
-    }, 100);
-    setChatInput("");
-  };
-  return (
-    <>
-      <div
-        className="h-[85vh] relative"
-        style={{ display: chatVisible ? "block" : "none" }}
-      >
-        <div className="flex justify-between pt-2">
-          <div className="font-semibold text-xl">Chat</div>
-          <MdCancel
-            className="w-6 h-6 cursor-pointer hover:opacity-90"
-            onClick={() => {
-              setChatVisible(false);
-            }}
-          />
-        </div>
-        <div
-          id="chatBar"
-          className="pt-4 flex flex-col gap-2 max-h-[80vh] overflow-y-auto text-sm"
-        >
-          {chatHistory.map(({ message, sender, time }, id) => (
-            <div key={id}>
-              <div className="flex gap-1">
-                <span className="font-semibold">{sender}</span>
-                <span>
-                  {time.toLocaleTimeString("en-US", {
-                    hour12: false,
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
-              <div className="pl-0.5">{message}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div
-        className="grow items-center"
-        style={{ display: chatVisible ? "flex" : "none" }}
-      >
-        <div className="w-full flex h-10 py-1 px-2 justify-center items-center rounded-lg bg-gray-200">
-          <input
-            type="text"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSend();
-            }}
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            className="grow bg-gray-200 focus:outline-none"
-          />
-          <MdSend onClick={handleSend} className="w-6 h-6 hover:opacity-90" />
-        </div>
-      </div>
-    </>
-  );
-}
-
-function Video({
-  videoId,
-  audioId,
-  streaming,
-  user,
-  children,
-  pinned,
-  setPinned,
-  key
-}: {
-  videoId: string;
-  audioId: string;
-  streaming: {
-    audio: boolean;
-    video: boolean;
-  };
-  user: {
-    image: string;
-    name: string;
-  };
-  children?: ReactNode;
-  pinned: string;
-  setPinned: (pinned: string) => void;
-  key?: number;
-}) {
-  return (
-    <div key={key} className={`aspect-video max-h-full overflow-hidden relative group rounded-lg bg-white bg-opacity-20 w-full max-w-full ${(pinned && pinned!==videoId) ? 'hidden' : 'block'}`}>
-      <video
-        id={videoId}
-        autoPlay
-        muted
-        className="w-full h-full relative object-cover"
-      />
-      <audio id={audioId} className="hidden"></audio>
-      <div className="w-full h-full absolute top-0 left-0 flex justify-center items-center text-white">
-        {!streaming.video &&
-          (user.image ? (
-            <Image
-              src={user?.image.replace("s96-c", "s384-c")}
-              className="rounded-full"
-              unoptimized
-              width={144}
-              height={144}
-              alt={`${user?.name}'s Image`}
-            />
-          ) : (
-            <FaUser className="w-16 h-16" />
-          ))}
-        {!streaming.audio && (
-          <MdMicOff className="w-6 h-6 absolute right-2 top-2" />
-        )}
-        {user?.name && (
-          <div className="absolute bottom-4 left-4 font-semibold">
-            {user?.name}
-          </div>
-        )}
-        {
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-            <div className="bg-black bg-opacity-70 p-2 rounded-lg hidden cursor-pointer group-hover:block">
-            {
-              !pinned ?
-              <MdFullscreen onClick={()=>setPinned(videoId)} className="h-6 w-6 hover:scale-110"/> :
-              <MdFullscreenExit onClick={()=>setPinned("")} className="h-6 w-6 hover:scale-90"/>
-            }
-            </div>
-          </div>
-        }
-        {children}
-      </div>
-    </div>
-  );
-}
+import Video from "@/components/Video";
+import ChatBar from "@/components/ChatBar";
 
 export default function Room({}) {
   console.log("rendered");
@@ -325,30 +169,16 @@ export default function Room({}) {
     }
   }, [chatHistory]);
 
-  console.log(peerContext?.peers);
+  const numberOfStreams = (peerContext?.peers.length || 0) + 1;
 
   return (
     <div className="w-full h-screen flex">
       <div className="grow h-full p-4 flex flex-col gap-4 bg-black opacity-95">
-        <div
-          className="grid place-items-center w-full gap-4 h-[85vh] relative"
-          style={{
-            gridTemplateColumns: `repeat(${
-              !peerContext?.peers.length || pinned
-                ? 1
-                : peerContext?.peers.length < 4
-                ? 2
-                : 3
-            }, minmax(0, 1fr))`,
-            gridTemplateRows: `repeat(${
-              !peerContext?.peers.length || pinned
-                ? 1
-                : peerContext?.peers.length < 2
-                ? 1
-                : 2
-            }, minmax(0, 1fr))`,
-          }}
-        >
+        <div className={`grid justify-center place-content-stretch w-full gap-4 h-[85vh] relative ${
+          numberOfStreams === 1 ? "grid-cols-1" :
+          numberOfStreams <= 4 ? "md:grid-cols-2" :
+          "md:grid-cols-3"
+        }`}>
           <Video
             videoId="localVideo"
             audioId="localAudio"
