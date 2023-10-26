@@ -11,6 +11,8 @@ export const PeerProvider = (props: {
     const [myStream, setMyStream] = useState<MediaStream | null>(null);
 
     const [chatHistory, setChatHistory] = useState<Chat[]>([]);
+    const [chatUnread, setChatUnread] = useState<boolean>(false);
+    const [chatVisible, setChatVisibleAct] = useState<boolean>(false);
 
     const getPeerBySocketId = (socketId: string) => {
         return peers.find(peer=>peer.socketId === socketId)?.peer;
@@ -246,6 +248,7 @@ export const PeerProvider = (props: {
             message,
             time: new Date()
         }]);
+        if(!chatVisible) setChatUnread(true);
     }
 
     const streamsUpdatesRendered = () => {
@@ -268,6 +271,11 @@ export const PeerProvider = (props: {
         });
     };
 
+    const setChatVisible = (b: boolean) => {
+        if(b) setChatUnread(false);
+        setChatVisibleAct(b);
+    }
+
     return (
         <PeerContext.Provider value={{
             peers,
@@ -282,6 +290,9 @@ export const PeerProvider = (props: {
             clearTracks,
             removePeer,
             chatHistory,
+            chatUnread,
+            chatVisible,
+            setChatVisible,
             sendChat,
             receiveChat,
             streamsUpdatesRendered

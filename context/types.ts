@@ -135,6 +135,9 @@ export interface PeerContextType {
     clearTracks: (to: string, type: 'audio' | 'video') => void;
     removePeer: (socketId: string) => void;
     chatHistory: Chat[];
+    chatUnread: boolean,
+    chatVisible: boolean,
+    setChatVisible: (d: boolean) => void,
     sendChat: (socket: Socket<ServerToClientEvents, ClientToServerEvents>, message: string) => void;
     receiveChat: (socketId: string, message: string) => void;
     streamsUpdatesRendered: () => void;
