@@ -109,6 +109,7 @@ export interface Peer {
     socketId: string;
     peer: RTCPeerConnection;
     stream: MediaStream | null;
+    audioTracks: MediaStreamTrack[];
     audio: {
         playing: boolean;
         changed: boolean;
@@ -128,6 +129,7 @@ export interface Chat {
 export interface PeerContextType {
     peers: Peer[];
     myStream: MediaStream | null;
+    audioStream: MediaStream;
     sendStream: (stream: MediaStream) => void;
     createPeer: (socketId: string, socket: Socket<ServerToClientEvents, ClientToServerEvents>, userDetails: {
         name: string,

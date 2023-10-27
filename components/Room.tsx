@@ -1,6 +1,6 @@
 import { PeerContext } from "@/context/PeersProvider";
 import { SocketContext } from "@/context/SocketProvider";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   MdChatBubble,
   MdMarkChatUnread,
@@ -24,6 +24,8 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
   const [video, setVideo] = useState<MediaStream | null>(null);
   const [audio, setAudio] = useState<MediaStream | null>(null);
   const [presentation, setPresentation] = useState<MediaStream | null>(null);
+
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const [pinned, setPinned] = useState<string>("");
 
@@ -113,53 +115,34 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
     else videoRef.srcObject = video;
   }, [video, presentation]);
 
-  const [audioPlaying, setAudioPlaying] = useState<boolean[]>([]);
-
   useEffect(() => {
     const remoteStreams = peerContext?.peers.map(
       ({ stream, audio, video }) => ({
         stream,
         audio,
-        video,
+        video
       })
     );
     if (!remoteStreams) return;
     let changed = false;
-    remoteStreams?.forEach(({ stream, audio, video }, id) => {
+    remoteStreams?.forEach(({ stream, video }, id) => {
       const remoteVideo = document.getElementById(
         `remoteVideo${id}`
       ) as HTMLVideoElement;
-      const remoteAudio = document.getElementById(
-        `remoteAudio${id}`
-      ) as HTMLAudioElement;
       if (remoteVideo && video.changed) {
         remoteVideo.srcObject = stream;
         changed = true;
       }
-      if (remoteAudio && audio.changed) {
-        remoteAudio.srcObject = stream;
-        changed = true;
-        if (!audioPlaying[id]) remoteAudio.pause();
-        else remoteAudio.play();
-      }
     });
-    if (changed) peerContext?.streamsUpdatesRendered();
-  }, [audioPlaying, peerContext]);
-
-  useEffect(() => {
-    audioPlaying.forEach((playing, id) => {
-      const remoteAudio = document.getElementById(
-        `remoteAudio${id}`
-      ) as HTMLAudioElement;
-      if (remoteAudio) {
-        if (playing) {
-          if (remoteAudio.paused) remoteAudio.play();
-        } else {
-          if (!remoteAudio.paused) remoteAudio.pause();
+    if(remoteStreams.find(({audio})=>audio.changed)){
+        if(audioRef.current && peerContext?.audioStream){
+            audioRef.current.srcObject = peerContext.audioStream;
+            audioRef.current.play();
         }
-      }
-    });
-  }, [audioPlaying]);
+        changed = true;
+    }
+    if (changed) peerContext?.streamsUpdatesRendered();
+  }, [peerContext]);
 
   const chatHistory = peerContext?.chatHistory;
   useEffect(() => {
@@ -193,9 +176,9 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
               : "md:grid-cols-3"
           }`}
         >
+          <audio id="audioPlayer" ref={audioRef} className="hidden"/>
           <Video
             videoId="localVideo"
-            audioId="localAudio"
             streaming={{
               audio: !!audio,
               video: !!video,
@@ -210,7 +193,6 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
           {peerContext?.peers.map(({ audio, video, user }, id) => (
             <Video
               videoId={`remoteVideo${id}`}
-              audioId={`remoteAudio${id}`}
               streaming={{
                 audio: audio.playing,
                 video: video.playing,
@@ -223,20 +205,6 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
               setPinned={setPinned}
               key={id}
             >
-              <button
-                onClick={() => {
-                  setAudioPlaying((prev) => {
-                    const newAudioPlaying = [...prev];
-                    newAudioPlaying[id] = true;
-                    return newAudioPlaying;
-                  });
-                }}
-                className={`bg-sky-600 px-4 py-2 rounded-2xl text-xl font-semibold absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${
-                  audioPlaying[id] ? "hidden" : "block"
-                }`}
-              >
-                {"Allow Sound"}
-              </button>
             </Video>
           ))}
         </div>

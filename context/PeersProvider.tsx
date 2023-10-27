@@ -14,6 +14,8 @@ export const PeerProvider = (props: {
     const [chatUnread, setChatUnread] = useState<boolean>(false);
     const [chatVisible, setChatVisibleAct] = useState<boolean>(false);
 
+    const [audioStream, setAudioStream] = useState<MediaStream>(new MediaStream());
+
     const [userRequests, setUserRequests] = useState<{
         socketId: string,
         user: {
@@ -35,17 +37,24 @@ export const PeerProvider = (props: {
                 if(peer.socketId === socketId){
                     if(!peer.stream) peer.stream = new MediaStream();
                     event.streams[0].getTracks().forEach((track) => {
-                        if(track.kind === "audio")
+                        if(track.kind === "audio"){
                             peer.audio = {
                                 playing: true,
                                 changed: true
                             };
-                        else if(track.kind === "video")
+                            peer.audioTracks.push(track);
+                            setAudioStream(prev=>{
+                                prev.addTrack(track);
+                                return prev;
+                            });
+                        }
+                        else if(track.kind === "video"){
                             peer.video = {
                                 playing: true,
                                 changed: true
                             };
-                        peer.stream?.addTrack(track);
+                            peer.stream?.addTrack(track);
+                        }
                     });
                     console.log(peer.stream?.getTracks());
                 }
@@ -113,6 +122,7 @@ export const PeerProvider = (props: {
                 socketId, 
                 peer,
                 stream: new MediaStream(),
+                audioTracks: [],
                 audio: {
                     playing: false,
                     changed: true
@@ -210,14 +220,22 @@ export const PeerProvider = (props: {
         setPeers(prev=>{
             const newPeers = prev.map(peer=>{
                 if(peer.socketId === socketId){
-                    const newTracks: MediaStreamTrack[] = [];
-                    peer.stream?.getTracks().forEach(track=>{
-                        if(type==='presentation') track.stop();
-                        else if(track.kind === type)
+                    if(type==='video' || type==='presentation'){
+                        peer.stream?.getTracks().forEach(track=>{
+                            setAudioStream(prev=>{
+                                prev.removeTrack(track);
+                                return prev;
+                            });
                             track.stop();
-                        else newTracks.push(track);
-                    });
-                    peer.stream = new MediaStream(newTracks);
+                        });
+                        peer.stream = new MediaStream();
+                    }
+                    else{
+                        peer.audioTracks.forEach(track=>{
+                            track.stop();
+                        });
+                        peer.audioTracks = [];
+                    }
                     if(type==='audio') peer.audio = {
                         playing: false,
                         changed: true
@@ -321,7 +339,8 @@ export const PeerProvider = (props: {
             streamsUpdatesRendered,
             addUserRequest,
             userRequests,
-            acceptUser
+            acceptUser,
+            audioStream
         }}>
             {props.children}
         </PeerContext.Provider>

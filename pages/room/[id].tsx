@@ -4,7 +4,7 @@ import Room from "@/components/Room";
 import { SocketContext } from "@/context/SocketProvider";
 import { useUser } from "@/context/UserProvider";
 import { useRouter } from "next/router";
-import { use, useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 
 export default function RoomView() {
   const router = useRouter();

@@ -1,11 +1,10 @@
 import Image from "next/image";
-import { ReactNode, useEffect } from "react";
+import { ReactNode } from "react";
 import { FaUser } from "react-icons/fa";
 import { MdFullscreen, MdFullscreenExit, MdMicOff } from "react-icons/md";
 
 export default function Video({
   videoId,
-  audioId,
   streaming,
   user,
   children,
@@ -14,7 +13,6 @@ export default function Video({
   key,
 }: {
   videoId: string;
-  audioId: string;
   streaming: {
     audio: boolean;
     video: boolean;
@@ -42,10 +40,12 @@ export default function Video({
         <video
           id={videoId}
           autoPlay
+          playsInline
+          preload="auto"
+          controls={false}
           muted
           className="w-full h-full relative object-cover"
         />
-        <audio id={audioId} className="hidden"></audio>
         <div className="w-full h-full absolute top-0 left-0 flex justify-center items-center text-white">
           {!streaming.video &&
             (user.image ? (
