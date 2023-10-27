@@ -14,6 +14,15 @@ export const PeerProvider = (props: {
     const [chatUnread, setChatUnread] = useState<boolean>(false);
     const [chatVisible, setChatVisibleAct] = useState<boolean>(false);
 
+    const [userRequests, setUserRequests] = useState<{
+        socketId: string,
+        user: {
+            name: string,
+            image: string,
+            email: string
+        }
+    }[]>([]);
+
     const getPeerBySocketId = (socketId: string) => {
         return peers.find(peer=>peer.socketId === socketId)?.peer;
     }
@@ -276,6 +285,20 @@ export const PeerProvider = (props: {
         setChatVisibleAct(b);
     }
 
+    const addUserRequest = (socketId: string, user: {
+        name: string,
+        image: string,
+        email: string
+    }) => {
+        if(!userRequests.find(req=>req.socketId === socketId))
+            setUserRequests(prev=>[...prev, {socketId, user}]);
+    }
+
+    const acceptUser = (socket: Socket<ServerToClientEvents, ClientToServerEvents>, roomId: string,  socketId: string) => {
+        setUserRequests(prev=>prev.filter(req=>req.socketId !== socketId));
+        socket.emit("userAccepted", roomId, socketId);
+    }
+
     return (
         <PeerContext.Provider value={{
             peers,
@@ -295,7 +318,10 @@ export const PeerProvider = (props: {
             setChatVisible,
             sendChat,
             receiveChat,
-            streamsUpdatesRendered
+            streamsUpdatesRendered,
+            addUserRequest,
+            userRequests,
+            acceptUser
         }}>
             {props.children}
         </PeerContext.Provider>

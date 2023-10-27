@@ -1,301 +1,90 @@
 "use client";
-import { PeerContext } from "@/context/PeersProvider";
-import { SocketContext } from "@/context/SocketProvider";
-import { useRouter } from "next/router";
-import { useContext, useEffect, useState } from "react";
-import {
-  MdChatBubble,
-  MdMarkChatUnread,
-  MdMic,
-  MdMicOff,
-  MdVideocam,
-  MdVideocamOff,
-} from "react-icons/md";
-import { useUser } from "@/context/UserProvider";
-import Video from "@/components/Video";
-import ChatBar from "@/components/ChatBar";
 
-export default function Room({}) {
-  console.log("rendered");
+import Room from "@/components/Room";
+import { SocketContext } from "@/context/SocketProvider";
+import { useUser } from "@/context/UserProvider";
+import { useRouter } from "next/router";
+import { use, useCallback, useContext, useEffect, useState } from "react";
+
+export default function RoomView() {
   const router = useRouter();
   const { id } = router.query;
-
+  const [ error, setError ] = useState<string>("");
+  const [ response, setResponse ] = useState<{
+    roomId: string,
+    secret: string
+  } | null>(null);
+  const handleJoin = useCallback(async ()=>{
+    try {
+      const res = await fetch("/api/join-room", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          roomId: id
+        })
+      }).then(res=>res.json());
+      if(res.roomId) setResponse(res);
+      else{
+        setError(res.error);
+      }
+    } catch (err) {
+      setError("Room not found!");
+    }
+  },[id]);
+  const socket = useContext(SocketContext);
   const user = useUser();
 
-  const socket = useContext(SocketContext);
-  const peerContext = useContext(PeerContext);
-
-  const [video, setVideo] = useState<MediaStream | null>(null);
-  const [audio, setAudio] = useState<MediaStream | null>(null);
-  const [presentation, setPresentation] = useState<MediaStream | null>(null);
-
-  const [pinned, setPinned] = useState<string>("");
-
-  const handleVideoOn = () => {
-    navigator.mediaDevices
-      .getUserMedia({ video: true, audio: false })
-      .then((stream) => {
-        setVideo(stream);
-        peerContext?.sendStream(stream);
+  const handleJoinRequestAccepted = useCallback((roomId: string, secret: string)=>{
+    console.log("Join request accepted");
+    if(roomId === id){
+      setResponse({
+        roomId,
+        secret
       });
-  };
-  const handleVideoOff = () => {
-    video?.getTracks().forEach((track) => track.stop());
-    if (socket) peerContext?.stopStream(socket, "video");
-    setVideo(null);
-  };
-  const handleAudioOn = () => {
-    navigator.mediaDevices
-      .getUserMedia({ video: false, audio: true })
-      .then((stream) => {
-        setAudio(stream);
-        peerContext?.sendStream(stream);
-      });
-  };
-  const handleAudioOff = () => {
-    audio?.getTracks().forEach((track) => track.stop());
-    if (socket) peerContext?.stopStream(socket, "audio");
-    setAudio(null);
-  };
-  const handlePresentationOff = () => {
-    presentation?.getTracks().forEach((track) => track.stop());
-    if (socket) peerContext?.stopStream(socket, "presentation");
-    const audioRef = document.getElementById("localAudio") as HTMLAudioElement;
-    if (audioRef) {
-      audioRef.pause();
-      audioRef.srcObject = null;
     }
-    setPresentation(null);
-  };
+  },[id]);
 
-  const handlePresentationOn = () => {
-    navigator.mediaDevices
-      .getDisplayMedia({ video: true, audio: true })
-      .then((stream) => {
-        setPresentation(stream);
-        stream.getTracks().forEach((track) => {
-          if (track.kind === "video") {
-            track.addEventListener("ended", handlePresentationOff);
-          }
-        });
-        const audioRef = document.getElementById("localAudio") as HTMLAudioElement;
-        if (audioRef) {
-          audioRef.srcObject = stream;
-          audioRef.play();
-        }
-        handleAudioOff();
-        handleVideoOff();
-        peerContext?.sendStream(stream);
-      });
-  };
+  useEffect(()=>{
+    if((socket && user) && (response?.roomId && !response?.secret)){
+      socket?.emit("requestJoinRoom",
+        response.roomId,
+        user
+      );
+    }
+  },[response, socket, user])
 
-  const handleChatSend = (chatInput: string) => {
-    if (!chatInput) return;
-    if (!socket) return;
-    peerContext?.sendChat(socket, chatInput);
-  };
+  useEffect(()=>{
+    socket?.on("joinRequestAccepted", handleJoinRequestAccepted);
+    return ()=>{
+      socket?.off("joinRequestAccepted", handleJoinRequestAccepted);
+    }
+  },[
+    socket,
+    handleJoinRequestAccepted
+  ]);
 
-  useEffect(() => {
-    if (!socket || !id) return;
-    socket.emit("roomJoined", id as string);
-    return () => {
-      console.log("unmount");
-      socket.emit("roomLeft", id as string);
-    };
-  }, [socket, id]);
-
-  useEffect(() => {
-    const videoRef = document.getElementById("localVideo") as HTMLAudioElement;
-    if (!videoRef) return;
-    if (presentation) videoRef.srcObject = presentation;
-    else videoRef.srcObject = video;
-  }, [video, presentation]);
-
-  const [audioPlaying, setAudioPlaying] = useState<boolean[]>([]);
-
-  useEffect(() => {
-    const remoteStreams = peerContext?.peers.map(
-      ({ stream, audio, video }) => ({
-        stream,
-        audio,
-        video,
-      })
+  if(!response)
+    return (
+      <main className="flex min-h-screen w-full p-8 justify-center items-center gap-4">
+        <div className="grid gap-2">
+          <div className="">Join Meeting</div>
+          <div>{id}</div>
+          {error && <div className="text-red-500">{error}</div>}
+          <button onClick={handleJoin} className="w-fit px-3 py-1 border border-gray-800 rounded-lg">Join</button>
+        </div>
+      </main>
     );
-    if (!remoteStreams) return;
-    let changed = false;
-    remoteStreams?.forEach(({ stream, audio, video }, id) => {
-      const remoteVideo = document.getElementById(
-        `remoteVideo${id}`
-      ) as HTMLVideoElement;
-      const remoteAudio = document.getElementById(
-        `remoteAudio${id}`
-      ) as HTMLAudioElement;
-      if (remoteVideo && video.changed) {
-        remoteVideo.srcObject = stream;
-        changed = true;
-      }
-      if (remoteAudio && audio.changed) {
-        remoteAudio.srcObject = stream;
-        changed = true;
-        if (!audioPlaying[id]) remoteAudio.pause();
-        else remoteAudio.play();
-      }
-    });
-    if (changed) peerContext?.streamsUpdatesRendered();
-  }, [audioPlaying, peerContext]);
-
-  useEffect(() => {
-    audioPlaying.forEach((playing, id) => {
-      const remoteAudio = document.getElementById(
-        `remoteAudio${id}`
-      ) as HTMLAudioElement;
-      if (remoteAudio) {
-        if (playing) {
-          if (remoteAudio.paused) remoteAudio.play();
-        } else {
-          if (!remoteAudio.paused) remoteAudio.pause();
-        }
-      }
-    });
-  }, [audioPlaying]);
-
-  const chatHistory = peerContext?.chatHistory;
-  useEffect(() => {
-    if (chatHistory?.length) {
-      if (chatHistory[chatHistory.length - 1].sender !== "You") {
-        const messageAudio = new Audio("/message.mp3");
-        messageAudio.play();
-      }
+  else{
+    if(response.secret){
+      return (
+        <Room id={response.roomId} secret={response.secret}/>
+      )
+    } else{
+      return (
+        <div>Joining...</div>
+      )
     }
-  }, [chatHistory]);
-
-  const numberOfStreams = (peerContext?.peers.length || 0) + 1;
-
-  return (
-    <div className="w-full h-screen flex">
-      <div className="grow h-full p-4 flex flex-col gap-4 bg-black opacity-95">
-        <div className={`grid justify-center place-content-stretch w-full gap-4 h-[85vh] relative ${
-          numberOfStreams === 1 ? "grid-cols-1" :
-          numberOfStreams <= 4 ? "md:grid-cols-2" :
-          "md:grid-cols-3"
-        }`}>
-          <Video
-            videoId="localVideo"
-            audioId="localAudio"
-            streaming={{
-              audio: !!audio,
-              video: !!video,
-            }}
-            user={{
-              image: user?.image || "",
-              name: user?.name || "",
-            }}
-            pinned={pinned}
-            setPinned={setPinned}
-          />
-          {peerContext?.peers.map(({ audio, video, user }, id) => (
-            <Video
-              videoId={`remoteVideo${id}`}
-              audioId={`remoteAudio${id}`}
-              streaming={{
-                audio: audio.playing,
-                video: video.playing,
-              }}
-              user={{
-                image: user?.image || "",
-                name: user?.name || "",
-              }}
-              pinned={pinned}
-              setPinned={setPinned}
-              key={id}
-            >
-              <button
-                onClick={() => {
-                  setAudioPlaying((prev) => {
-                    const newAudioPlaying = [...prev];
-                    newAudioPlaying[id] = true;
-                    return newAudioPlaying;
-                  });
-                }}
-                className={`bg-sky-600 px-4 py-2 rounded-2xl text-xl font-semibold absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${
-                  audioPlaying[id] ? "hidden" : "block"
-                }`}
-              >
-                {"Allow Sound"}
-              </button>
-            </Video>
-          ))}
-        </div>
-        <div className="grow flex items-center justify-center gap-4 relative">
-          {video ? (
-            <button
-              onClick={handleVideoOff}
-              className="p-2 bg-gray-700 text-gray-100  rounded-full hover:opacity-90"
-            >
-              <MdVideocam className="w-6 h-6" />
-            </button>
-          ) : (
-            <button
-              onClick={handleVideoOn}
-              className="p-2 bg-gray-300 rounded-full hover:opacity-90"
-            >
-              <MdVideocamOff className="w-6 h-6" />
-            </button>
-          )}
-          {audio ? (
-            <button
-              onClick={handleAudioOff}
-              className="p-2 bg-gray-700 text-gray-100 rounded-full hover:opacity-90"
-            >
-              <MdMic className="w-6 h-6" />
-            </button>
-          ) : (
-            <button
-              onClick={handleAudioOn}
-              className="p-2 bg-gray-300 rounded-full hover:opacity-90"
-            >
-              <MdMicOff className="w-6 h-6" />
-            </button>
-          )}
-          {presentation ? (
-            <button
-              onClick={handlePresentationOff}
-              className="p-2 bg-gray-700 text-gray-100 rounded-full hover:opacity-90"
-            >
-              Stop Presentation
-            </button>
-          ) : (
-            <button
-              onClick={handlePresentationOn}
-              className="p-2 bg-gray-300 rounded-full hover:opacity-90"
-            >
-              Start Presentation
-            </button>
-          )}
-          <button
-            onClick={() => peerContext?.setChatVisible(!peerContext?.chatVisible)}
-            className="p-2 bg-gray-300 rounded-y-full rounded-l-full ml-auto absolute -right-4 top-1/2 -translate-y-1/2"
-          >
-            {peerContext?.chatUnread ? (
-              <MdMarkChatUnread className="w-6 h-6" />
-            ) : (
-              <MdChatBubble className="w-6 h-6" />
-            )}
-          </button>
-        </div>
-      </div>
-      <div
-        className={`bg-gray-300 relative transition-all duration-200 flex flex-col gap-4 overflow-hidden ${
-          peerContext?.chatVisible ? "w-96 p-4" : "w-0"
-        }`}
-      >
-        <ChatBar
-          chatVisible={peerContext?.chatVisible || false}
-          setChatVisible={peerContext?.setChatVisible || (() => {})}
-          chatHistory={peerContext?.chatHistory || []}
-          handleChatSend={handleChatSend}
-        />
-      </div>
-    </div>
-  );
+  }
 }

@@ -42,10 +42,24 @@ export interface ServerToClientEvents {
         sender: string,
         message: string
     }) => void;
+    userRequestJoinRoom: (socketIdWithUser: {
+        socketId: string,
+        user: {
+            name: string,
+            image: string,
+            email: string
+        }
+    }) => void;
+    joinRequestAccepted: (roomId: string, secret: string) => void;
 }
 
 export interface ClientToServerEvents {
-    roomJoined: (roomId: string) => void;
+    roomJoined: (roomId: string, secret: string) => void;
+    requestJoinRoom: (roomId: string, user: {
+        name: string,
+        image: string,
+        email: string
+    }) => void;
     roomLeft: (roomId: string) => void;
     offersCreated: (
         roomId: string, 
@@ -83,6 +97,7 @@ export interface ClientToServerEvents {
     }) => void;
     streamStopped: (to: string, type: 'audio' | 'video' | 'presentation') => void;
     chatSend: (to: string, message: string) => void;
+    userAccepted: (roomId: string, to: string) => void;
 }
 
 export interface Peer {
@@ -141,4 +156,18 @@ export interface PeerContextType {
     sendChat: (socket: Socket<ServerToClientEvents, ClientToServerEvents>, message: string) => void;
     receiveChat: (socketId: string, message: string) => void;
     streamsUpdatesRendered: () => void;
+    userRequests: {
+        socketId: string,
+        user: {
+            name: string,
+            image: string,
+            email: string
+        }
+    }[];
+    addUserRequest: (socketId: string, user: {
+        name: string,
+        image: string,
+        email: string
+    }) => void;
+    acceptUser: (socket: Socket<ServerToClientEvents, ClientToServerEvents>, roomId: string, socketId: string) => void;
 }

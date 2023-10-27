@@ -1,9 +1,15 @@
 import { firestore } from '@/firebase/clientApp'
 import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { getServerSession } from 'next-auth'
+import { authOptions } from './auth/[...nextauth]'
+import { randomUUID } from 'crypto'
 
 type Data = {
-  roomId: string
+  roomId: string,
+  secret: string
+} | {
+  error: string
 }
 
 function generateRoomId(): string {
@@ -19,7 +25,11 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Data>
 ) {
-  // check if room exists
+  const session = await getServerSession(req, res, authOptions);
+  if (!session) {
+    res.status(401).json({ error: "Not Authorized!" });
+    return;
+  }
   let generated = false;
   let collisions = 0;
   while(!generated){
@@ -28,14 +38,20 @@ export default async function handler(
     const roomQuery =  query(roomsRef, where('roomId', '==', roomId));
     const result = await getDocs(roomQuery);
     if (result.docs.length === 0) {
-        await setDoc(doc(roomsRef), { roomId: roomId });
-        res.status(200).json({ roomId: roomId });
+        const newSecret = randomUUID();
+        await setDoc(doc(roomsRef), { roomId: roomId, users: [{
+          email: session.user?.email,
+        }], secret: newSecret });
+        res.status(200).json({
+          roomId: roomId,
+          secret: newSecret
+        });
         generated = true;
     }
     else{
         collisions++;
         if(collisions > 28){
-            res.status(500);
+            res.status(500).json({ error: "Failed to generate room id!" });
             break;
         }
     }
