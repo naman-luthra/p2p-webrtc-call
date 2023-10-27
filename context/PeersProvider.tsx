@@ -133,6 +133,7 @@ export const PeerProvider = (props: {
                 }
             }];
         });
+        setUserRequests(prev=>prev.filter(req=>req.socketId !== socketId));
         return peer;
     };
 
