@@ -172,4 +172,5 @@ export interface PeerContextType {
         email: string
     }) => void;
     acceptUser: (socket: Socket<ServerToClientEvents, ClientToServerEvents>, roomId: string, socketId: string) => void;
+    ignoreRequest: (socketId: string) => void;
 }

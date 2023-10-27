@@ -98,6 +98,10 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
     if (!socket) return;
     peerContext?.acceptUser(socket, id, socketId);
   }
+  const handleIgnoreRequest = (socketId: string) => {
+    if (!socket) return;
+    peerContext?.ignoreRequest(socketId);
+  }
 
   useEffect(() => {
     if (!socket || !id) return;
@@ -293,7 +297,7 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
                 </div>
                 <div className="flex justify-end gap-2">
                     <button onClick={()=>handleUserAccept(socketId)} className="hover:opacity-90">Accept</button>
-                    <button>Decline</button>
+                    <button onClick={()=>handleIgnoreRequest(socketId)} className="hover:opacity-90">Ignore</button>
                 </div>
             </div>
         ))

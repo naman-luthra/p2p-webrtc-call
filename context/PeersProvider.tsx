@@ -318,6 +318,10 @@ export const PeerProvider = (props: {
         socket.emit("userAccepted", roomId, socketId);
     }
 
+    const ignoreRequest = (socketId: string) => {
+        setUserRequests(prev=>prev.filter(req=>req.socketId !== socketId));
+    }
+
     return (
         <PeerContext.Provider value={{
             peers,
@@ -341,7 +345,8 @@ export const PeerProvider = (props: {
             addUserRequest,
             userRequests,
             acceptUser,
-            audioStream
+            audioStream,
+            ignoreRequest
         }}>
             {props.children}
         </PeerContext.Provider>
