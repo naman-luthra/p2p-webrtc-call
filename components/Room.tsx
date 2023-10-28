@@ -1,6 +1,6 @@
 import { PeerContext } from "@/context/PeersProvider";
 import { SocketContext } from "@/context/SocketProvider";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   MdChatBubble,
   MdMarkChatUnread,
@@ -13,6 +13,7 @@ import { useUser } from "@/context/UserProvider";
 import Video from "@/components/Video";
 import ChatBar from "@/components/ChatBar";
 import Image from "next/image";
+import createLayout from "@/utils/layout";
 
 export default function Room({ id, secret }: { id: string; secret: string }) {
   console.log("rendered");
@@ -28,7 +29,26 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const [pinned, setPinned] = useState<string>("");
-  const [minimised, setMinimised] = useState<boolean>(false);
+  const [minimised, setActMinimised] = useState<boolean>(false);
+
+  const setMinimised = (minimised: boolean) => {
+    setActMinimised(minimised);
+    if (minimised) {
+      const localVideoContainer = document.getElementById(
+        "container-localVideo"
+      );
+      console.log(localVideoContainer);
+      if (localVideoContainer) {
+        localVideoContainer.style.width = "256px";
+        localVideoContainer.style.height = "144px";
+        localVideoContainer.style.top = "auto";
+        localVideoContainer.style.left = "auto";
+        localVideoContainer.style.bottom = "16px";
+        localVideoContainer.style.right = "16px";
+      }
+      setPinned("");
+    }
+  };
 
   const handleVideoOn = () => {
     navigator.mediaDevices
@@ -98,11 +118,11 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
   const handleUserAccept = (socketId: string) => {
     if (!socket) return;
     peerContext?.acceptUser(socket, id, socketId);
-  }
+  };
   const handleIgnoreRequest = (socketId: string) => {
     if (!socket) return;
     peerContext?.ignoreRequest(socketId);
-  }
+  };
 
   useEffect(() => {
     if (!socket || !id) return;
@@ -125,7 +145,7 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
       ({ stream, audio, video }) => ({
         stream,
         audio,
-        video
+        video,
       })
     );
     if (!remoteStreams) return;
@@ -139,12 +159,12 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
         changed = true;
       }
     });
-    if(remoteStreams.find(({audio})=>audio.changed)){
-        if(audioRef.current && peerContext?.audioStream){
-            audioRef.current.srcObject = peerContext.audioStream;
-            audioRef.current.play();
-        }
-        changed = true;
+    if (remoteStreams.find(({ audio }) => audio.changed)) {
+      if (audioRef.current && peerContext?.audioStream) {
+        audioRef.current.srcObject = peerContext.audioStream;
+        audioRef.current.play();
+      }
+      changed = true;
     }
     if (changed) peerContext?.streamsUpdatesRendered();
   }, [peerContext]);
@@ -160,28 +180,63 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
   }, [chatHistory]);
 
   const userRequests = peerContext?.userRequests;
-    useEffect(() => {
-        if (userRequests?.length) {
-        const messageAudio = new Audio("/request.mp3");
-        messageAudio.play();
-        }
-    }, [userRequests]);
+  useEffect(() => {
+    if (userRequests?.length) {
+      const messageAudio = new Audio("/request.mp3");
+      messageAudio.play();
+    }
+  }, [userRequests]);
 
-  const numberOfStreams = (peerContext?.peers.length || 0) + 1 - (minimised ? 1 : 0);
+  const numberOfStreams = pinned
+    ? 1
+    : (peerContext?.peers.length || 0) + 1 - (minimised ? 1 : 0);
+
+  const handleLayout = useCallback(() => {
+    const videoGrid = document.getElementById("videoGrid");
+    if (!videoGrid) return;
+    const containerWidth = videoGrid.clientWidth;
+    const containerHeight = videoGrid.clientHeight;
+    const layout = createLayout(
+      numberOfStreams,
+      containerWidth,
+      containerHeight
+    );
+    layout.coordinates.forEach(({ top, left }, id) => {
+      let videoElement: HTMLElement | null = null;
+      if (id == 0 && !minimised) {
+        videoElement = pinned
+          ? document.getElementById(`container-${pinned}`)
+          : document.getElementById("container-localVideo");
+      } else
+        videoElement = pinned
+          ? document.getElementById(`container-${pinned}`)
+          : document.getElementById(
+              `container-remoteVideo${minimised ? id : id - 1}`
+            );
+      if (videoElement) {
+        videoElement.style.top = `${top}px`;
+        videoElement.style.bottom = "auto";
+        videoElement.style.left = `${left}px`;
+        videoElement.style.right = "auto";
+        videoElement.style.width = `${layout.elementWidth}px`;
+        videoElement.style.height = `${layout.elementHeight}px`;
+      }
+    });
+  }, [numberOfStreams, minimised]);
+
+  useEffect(() => {
+    handleLayout();
+    window.addEventListener("resize", handleLayout);
+    return () => {
+      window.removeEventListener("resize", handleLayout);
+    };
+  }, [numberOfStreams, minimised]);
 
   return (
     <div className="w-full h-screen flex">
-      <div className="grow h-full p-4 flex flex-col gap-4 bg-black opacity-95 relative">
-        <div
-          className={`grid justify-center place-content-stretch w-full gap-4 h-[85vh] relative ${
-            (numberOfStreams === 1 || pinned)
-              ? "grid-cols-1"
-              : numberOfStreams <= 4
-              ? "md:grid-cols-2"
-              : "md:grid-cols-3"
-          }`}
-        >
-          <audio id="audioPlayer" ref={audioRef} className="hidden"/>
+      <div className="grow h-full p-2 flex flex-col gap-4 bg-black opacity-95 relative">
+        <div id="videoGrid" className="w-full h-[85vh] relative">
+          <audio id="audioPlayer" ref={audioRef} className="hidden" />
           <Video
             videoId="localVideo"
             streaming={{
@@ -213,8 +268,7 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
               setPinned={setPinned}
               key={id}
               minimisable={false}
-            >
-            </Video>
+            ></Video>
           ))}
         </div>
         <div className="grow flex items-center justify-center gap-4 relative">
@@ -290,23 +344,38 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
         />
       </div>
       <div className="grid gap-2 absolute bottom-4 right-4">
-      {
-        userRequests?.map(({ user, socketId }, id) => (
-            <div key={id} className="bg-white p-4 rounded-lg">
-                <div className="flex gap-2 justify-center items-center">
-                    <Image src={user.image} alt={`${user.name}'s picture`} unoptimized width={48} height={48} className="rounded-full"/>
-                    <div>
-                        <div className="font-semibold text-sm">{user.name}</div>
-                        <div className="text-xs">{user.email}</div>
-                    </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                    <button onClick={()=>handleUserAccept(socketId)} className="hover:opacity-90">Accept</button>
-                    <button onClick={()=>handleIgnoreRequest(socketId)} className="hover:opacity-90">Ignore</button>
-                </div>
+        {userRequests?.map(({ user, socketId }, id) => (
+          <div key={id} className="bg-white p-4 rounded-lg">
+            <div className="flex gap-2 justify-center items-center">
+              <Image
+                src={user.image}
+                alt={`${user.name}'s picture`}
+                unoptimized
+                width={48}
+                height={48}
+                className="rounded-full"
+              />
+              <div>
+                <div className="font-semibold text-sm">{user.name}</div>
+                <div className="text-xs">{user.email}</div>
+              </div>
             </div>
-        ))
-      }
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => handleUserAccept(socketId)}
+                className="hover:opacity-90"
+              >
+                Accept
+              </button>
+              <button
+                onClick={() => handleIgnoreRequest(socketId)}
+                className="hover:opacity-90"
+              >
+                Ignore
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

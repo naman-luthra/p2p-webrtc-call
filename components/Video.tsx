@@ -13,7 +13,7 @@ export default function Video({
   setPinned,
   minimisable,
   minimised,
-  setMinimised,
+  setMinimised
 }: {
   videoId: string;
   streaming: {
@@ -37,11 +37,12 @@ export default function Video({
       id={`container-${videoId}`}
       className={
         minimisable && minimised
-          ? "absolute bottom-2 right-2 w-64 h-36 z-20"
-          : `max-w-full max-h-full overflow-hidden justify-center items-center ${
-              pinned && pinned !== videoId ? "hidden" : "flex"
+          ? "absolute p-2 z-20"
+          : `absolute p-2 ${
+              pinned && pinned !== videoId ? "hidden" : "block"
             }`
       }
+
       draggable={minimisable && minimised}
     >
       <div className={`overflow-hidden h-full w-full object-contain box-border relative group rounded-lg ${(minimisable && minimised) ? 'bg-[#212121]' : 'bg-[#3d3d3d]'}`}>
