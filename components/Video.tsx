@@ -2,6 +2,7 @@ import Image from "next/image";
 import { ReactNode } from "react";
 import { FaUser } from "react-icons/fa";
 import { MdFullscreen, MdFullscreenExit, MdMicOff } from "react-icons/md";
+import { TbWindowMaximize, TbWindowMinimize } from "react-icons/tb";
 
 export default function Video({
   videoId,
@@ -10,7 +11,9 @@ export default function Video({
   children,
   pinned,
   setPinned,
-  key,
+  minimisable,
+  minimised,
+  setMinimised,
 }: {
   videoId: string;
   streaming: {
@@ -24,19 +27,24 @@ export default function Video({
   children?: ReactNode;
   pinned: string;
   setPinned: (pinned: string) => void;
-  key?: number;
+  minimisable: boolean;
+  minimised?: boolean;
+  setMinimised?: (minimised: boolean) => void;
 }) {
+
   return (
     <div
-      key={key}
       id={`container-${videoId}`}
-      className={`max-w-full max-h-full overflow-hidden justify-center items-center ${
-        pinned && pinned !== videoId ? "hidden" : "flex"
-      }`}
+      className={
+        minimisable && minimised
+          ? "absolute bottom-2 right-2 w-64 h-36 z-20"
+          : `max-w-full max-h-full overflow-hidden justify-center items-center ${
+              pinned && pinned !== videoId ? "hidden" : "flex"
+            }`
+      }
+      draggable={minimisable && minimised}
     >
-      <div 
-        className="overflow-hidden h-full w-full object-contain box-border relative group rounded-lg bg-white bg-opacity-20"
-        >
+      <div className={`overflow-hidden h-full w-full object-contain box-border relative group rounded-lg ${(minimisable && minimised) ? 'bg-[#212121]' : 'bg-[#3d3d3d]'}`}>
         <video
           id={videoId}
           autoPlay
@@ -53,34 +61,61 @@ export default function Video({
                 src={user?.image.replace("s96-c", "s384-c")}
                 className="rounded-full"
                 unoptimized
-                width={144}
-                height={144}
+                width={(minimisable && minimised) ? 64 : 144}
+                height={(minimisable && minimised) ? 64 : 144}
                 alt={`${user?.name}'s Image`}
               />
             ) : (
-              <FaUser className="w-16 h-16" />
+              <FaUser className={(minimisable && minimised) ? "w-7 h-7" : "w-16 h-16"} />
             ))}
           {!streaming.audio && (
             <MdMicOff className="w-6 h-6 absolute right-2 top-2" />
           )}
           {user?.name && (
-            <div className="absolute bottom-4 left-4 font-semibold">
+            <div className={`absolute bottom-4 left-4 font-semibold ${(minimisable && minimised) ? "text-sm" : ""}`}>
               {user?.name}
             </div>
           )}
           {
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-              <div className="bg-black bg-opacity-70 p-2 rounded-lg hidden cursor-pointer group-hover:block">
-                {!pinned ? (
+              <div className="bg-black gap-2 bg-opacity-70 p-2 rounded-lg hidden cursor-pointer group-hover:flex">
+                {(!pinned && !minimised) ? (
                   <MdFullscreen
-                    onClick={() => setPinned(videoId)}
+                    onClick={(e: MouseEvent) => {
+                        setPinned(videoId);
+                        e.stopPropagation();
+                    }}
                     className="h-6 w-6 hover:scale-110"
                   />
-                ) : (
+                ) : (minimisable && minimised) ? <></> : (
                   <MdFullscreenExit
-                    onClick={() => setPinned("")}
+                    onClick={(e: MouseEvent) => {
+                        setPinned("");
+                        e.stopPropagation();
+                    }}
                     className="h-6 w-6 hover:scale-90"
                   />
+                )}
+                {minimisable && (
+                  <>
+                    {!minimised ? (
+                      <TbWindowMinimize
+                        onClick={(e: MouseEvent) => {
+                            setMinimised?.(true);
+                            e.stopPropagation();
+                        }}
+                        className="h-6 w-6 hover:scale-110"
+                      />
+                    ) : (
+                      <TbWindowMaximize
+                        onClick={(e: MouseEvent) => {
+                            setMinimised?.(false);
+                            e.stopPropagation()
+                        }}
+                        className="h-6 w-6 hover:scale-90"
+                      />
+                    )}
+                  </>
                 )}
               </div>
             </div>

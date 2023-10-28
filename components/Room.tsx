@@ -28,6 +28,7 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const [pinned, setPinned] = useState<string>("");
+  const [minimised, setMinimised] = useState<boolean>(false);
 
   const handleVideoOn = () => {
     navigator.mediaDevices
@@ -166,7 +167,7 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
         }
     }, [userRequests]);
 
-  const numberOfStreams = (peerContext?.peers.length || 0) + 1;
+  const numberOfStreams = (peerContext?.peers.length || 0) + 1 - (minimised ? 1 : 0);
 
   return (
     <div className="w-full h-screen flex">
@@ -193,6 +194,9 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
             }}
             pinned={pinned}
             setPinned={setPinned}
+            minimisable={true}
+            minimised={minimised}
+            setMinimised={setMinimised}
           />
           {peerContext?.peers.map(({ audio, video, user }, id) => (
             <Video
@@ -208,6 +212,7 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
               pinned={pinned}
               setPinned={setPinned}
               key={id}
+              minimisable={false}
             >
             </Video>
           ))}
