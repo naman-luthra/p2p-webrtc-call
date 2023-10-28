@@ -223,19 +223,17 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
       }
     });
   }, [numberOfStreams, minimised]);
-
   useEffect(() => {
     handleLayout();
-    window.addEventListener("resize", handleLayout);
-    return () => {
-      window.removeEventListener("resize", handleLayout);
-    };
+    const videoGrid = document.getElementById("videoGrid");
+    if(videoGrid)
+        new ResizeObserver(handleLayout).observe(videoGrid);
   }, [numberOfStreams, minimised]);
 
   return (
-    <div className="w-full h-screen flex">
-      <div className="grow h-full p-2 flex flex-col gap-4 bg-black opacity-95 relative">
-        <div id="videoGrid" className="w-full h-[85vh] relative">
+    <div className="absolute inset-0 flex">
+      <div className="grow h-full p-2 flex flex-col bg-black opacity-95 relative">
+        <div id="videoGrid" className="w-full grow relative">
           <audio id="audioPlayer" ref={audioRef} className="hidden" />
           <Video
             videoId="localVideo"
@@ -271,7 +269,7 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
             ></Video>
           ))}
         </div>
-        <div className="grow flex items-center justify-center gap-4 relative">
+        <div className="flex items-center justify-center gap-4 p-2 relative">
           {video ? (
             <button
               onClick={handleVideoOff}
@@ -321,7 +319,7 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
             onClick={() =>
               peerContext?.setChatVisible(!peerContext?.chatVisible)
             }
-            className="p-2 bg-gray-300 rounded-y-full rounded-l-full ml-auto absolute -right-4 top-1/2 -translate-y-1/2"
+            className="p-2 bg-gray-300 rounded-y-full rounded-l-full ml-auto absolute -right-2 top-1/2 -translate-y-1/2"
           >
             {peerContext?.chatUnread ? (
               <MdMarkChatUnread className="w-6 h-6" />
@@ -332,8 +330,8 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
         </div>
       </div>
       <div
-        className={`bg-gray-300 relative transition-all duration-200 flex flex-col gap-4 overflow-hidden ${
-          peerContext?.chatVisible ? "w-96 p-4" : "w-0"
+        className={`bg-gray-300 transition-all duration-200 flex flex-col overflow-hidden ${
+          peerContext?.chatVisible ? "w-full absolute inset-0 md:w-96 md:relative p-4" : "hidden md:flex md:w-0"
         }`}
       >
         <ChatBar

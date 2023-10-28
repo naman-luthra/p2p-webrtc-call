@@ -25,7 +25,7 @@ export default function ChatBar({
   return (
     <>
       <div
-        className="h-[85vh] relative"
+        className="grow relative"
         style={{ display: chatVisible ? "block" : "none" }}
       >
         <div className="flex justify-between pt-2">
@@ -59,7 +59,7 @@ export default function ChatBar({
         </div>
       </div>
       <div
-        className="grow items-center"
+        className="items-center"
         style={{ display: chatVisible ? "flex" : "none" }}
       >
         <div className="w-full flex h-10 py-1 px-2 justify-center items-center rounded-lg bg-gray-200">
