@@ -1,6 +1,7 @@
 import Loading from "@/components/Loading";
 import { ReactNode, createContext, useContext } from "react";
 
+// The User context.
 const UserContext = createContext<{
     name: string,
     image: string,
@@ -11,6 +12,11 @@ const UserContext = createContext<{
     email: ""
 });
 
+/**
+ * Hook to get the User context.
+ * 
+ * @returns The User context.
+ */
 export const useUser = () => {
     const context = useContext(UserContext);
     if (context === undefined) {
@@ -19,6 +25,14 @@ export const useUser = () => {
     return context;
 }
 
+/**
+ * Provides the User context for the application.
+ * @remarks
+ * This component creates a User context and manages various user details.
+ * @param props - The component props.
+ * @param props.children - The child components.
+ * @returns The UserProvider component.
+*/
 export default function UserProvider(props: {
     children: ReactNode;
     userData: {
@@ -27,7 +41,6 @@ export default function UserProvider(props: {
         email: string
     }
   }){
-    console.log(props.userData);
     if(!props.userData) return <Loading />;
     return (
         <UserContext.Provider value={{

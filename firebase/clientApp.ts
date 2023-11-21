@@ -1,6 +1,9 @@
 import firebase from "firebase/compat/app";
 import { getFirestore } from "firebase/firestore";
 
+/**
+ * Firebase client credentials.
+ */
 const clientCredentials = {
   apiKey: process.env.FIREBASE_API_KEY,
   authDomain: process.env.FIREBASE_AUTH_DOMAIN,
@@ -10,8 +13,15 @@ const clientCredentials = {
   appId: process.env.FIREBASE_APP_ID,
 };
 
+/**
+ * Initializes the Firebase app with the client credentials if it hasn't been initialized already.
+ */
 if (!firebase.apps.length) {
   firebase.initializeApp(clientCredentials);
 }
 
+/**
+ * Returns the Firestore instance.
+ * @returns The Firestore instance.
+ */
 export const firestore = getFirestore();

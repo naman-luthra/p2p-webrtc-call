@@ -15,8 +15,12 @@ import ChatBar from "@/components/ChatBar";
 import Image from "next/image";
 import createLayout from "@/utils/layout";
 
+/**
+ * Room component represents a video call room.
+ * @param id - The ID of the room.
+ * @param secret - The secret key of the room.
+ */
 export default function Room({ id, secret }: { id: string; secret: string }) {
-  console.log("rendered");
   const user = useUser();
 
   const socket = useContext(SocketContext);
@@ -31,13 +35,16 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
   const [pinned, setPinned] = useState<string>("");
   const [minimised, setActMinimised] = useState<boolean>(false);
 
+  /**
+   * Sets the minimised state of the room.
+   * @param minimised - Whether the room is minimised or not.
+   */
   const setMinimised = (minimised: boolean) => {
     setActMinimised(minimised);
     if (minimised) {
       const localVideoContainer = document.getElementById(
         "container-localVideo"
       );
-      console.log(localVideoContainer);
       if (localVideoContainer) {
         localVideoContainer.style.width = "256px";
         localVideoContainer.style.height = "144px";
@@ -50,6 +57,9 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
     }
   };
 
+  /**
+   * Handles turning on the video.
+   */
   const handleVideoOn = () => {
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: false })
@@ -58,11 +68,19 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
         peerContext?.sendStream(stream);
       });
   };
+
+  /**
+   * Handles turning off the video.
+   */
   const handleVideoOff = () => {
     video?.getTracks().forEach((track) => track.stop());
     if (socket) peerContext?.stopStream(socket, "video");
     setVideo(null);
   };
+
+  /**
+   * Handles turning on the audio.
+   */
   const handleAudioOn = () => {
     navigator.mediaDevices
       .getUserMedia({ video: false, audio: true })
@@ -71,11 +89,19 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
         peerContext?.sendStream(stream);
       });
   };
+
+  /**
+   * Handles turning off the audio.
+   */
   const handleAudioOff = () => {
     audio?.getTracks().forEach((track) => track.stop());
     if (socket) peerContext?.stopStream(socket, "audio");
     setAudio(null);
   };
+
+  /**
+   * Handles turning off the presentation.
+   */
   const handlePresentationOff = () => {
     presentation?.getTracks().forEach((track) => track.stop());
     if (socket) peerContext?.stopStream(socket, "presentation");
@@ -87,6 +113,9 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
     setPresentation(null);
   };
 
+  /**
+   * Handles turning on the presentation.
+   */
   const handlePresentationOn = () => {
     navigator.mediaDevices
       .getDisplayMedia({ video: true, audio: true })
@@ -110,15 +139,29 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
       });
   };
 
+  /**
+   * Handles sending a chat message.
+   * @param chatInput - The input message.
+   */
   const handleChatSend = (chatInput: string) => {
     if (!chatInput) return;
     if (!socket) return;
     peerContext?.sendChat(socket, chatInput);
   };
+
+  /**
+   * Handles accepting a user request.
+   * @param socketId - The ID of the socket.
+   */
   const handleUserAccept = (socketId: string) => {
     if (!socket) return;
     peerContext?.acceptUser(socket, id, socketId);
   };
+
+  /**
+   * Handles ignoring a user request.
+   * @param socketId - The ID of the socket.
+   */
   const handleIgnoreRequest = (socketId: string) => {
     if (!socket) return;
     peerContext?.ignoreRequest(socketId);
@@ -128,7 +171,6 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
     if (!socket || !id) return;
     socket.emit("roomJoined", id, secret);
     return () => {
-      console.log("unmount");
       socket.emit("roomLeft", id);
     };
   }, [socket, id, secret]);
@@ -191,6 +233,11 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
     ? 1
     : (peerContext?.peers.length || 0) + 1 - (minimised ? 1 : 0);
 
+  /**
+   * Handles the layout of video elements in the room.
+   * This function calculates the coordinates and sizes of video elements based on the container size and number of streams.
+   * It then applies the calculated layout to the video elements.
+   */
   const handleLayout = useCallback(() => {
     const videoGrid = document.getElementById("videoGrid");
     if (!videoGrid) return;

@@ -4,27 +4,42 @@ import React, {
   ReactNode,
   useCallback,
   useEffect,
-  useState,
   useContext,
 } from "react";
 import { Socket, io } from "socket.io-client";
 import { PeerContext } from "./PeersProvider";
 import { ClientToServerEvents, ServerToClientEvents } from "./types";
 import { useUser } from "./UserProvider";
+
+// The Socket context.
 export const SocketContext = createContext<Socket<
   ServerToClientEvents,
   ClientToServerEvents
 > | null>(null);
 
+/**
+ * Provides the Socket context for the application.
+ * @remarks
+ * This component creates a Socket.IO client and manages various socket events and callbacks.
+ * @param props - The component props.
+ * @param props.children - The child components.
+ * @returns The SocketProvider component.
+ */
 export const SocketProvider = (props: { children: ReactNode }) => {
+  // The signaling server URI.
   const signalingServerUri =
     process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL || "http://localhost:8000";
+  
+  // The socket instance.
   const socket = useMemo(() => io(signalingServerUri), []);
 
+  // The user details object.
   const user = useUser();
 
+  // The Peer context.
   const peerContext = useContext(PeerContext);
 
+  // Function to handle the creation of offers on joing a room
   const handleCreateOffers = useCallback(
     async (connections: { sockets: string[]; roomId: string }) => {
       const offers: {
@@ -60,6 +75,7 @@ export const SocketProvider = (props: { children: ReactNode }) => {
     [peerContext, socket]
   );
 
+  // Function to handle the acceptance of an offer from another peer
   const handleAcceptOffer = useCallback(
     async (offerWithSender: {
       offer: RTCSessionDescriptionInit;
@@ -97,6 +113,7 @@ export const SocketProvider = (props: { children: ReactNode }) => {
     [peerContext, socket]
   );
 
+  // Function to handle the saving of an answer from another peer
   const handleSaveAnswer = useCallback(
     async (answerWithPeer: {
       answer: RTCSessionDescriptionInit;
@@ -116,6 +133,7 @@ export const SocketProvider = (props: { children: ReactNode }) => {
     [peerContext]
   );
 
+  // Function to handle the acceptance of an negotiation offer from another peer
   const handleNegoOfferAccept = useCallback(
     async (offerWithSender: {
       offer: RTCSessionDescriptionInit;
@@ -126,7 +144,6 @@ export const SocketProvider = (props: { children: ReactNode }) => {
         offerWithSender.offer,
         null
       );
-      console.log("answer", answer);
       if (answer)
         socket.emit("negoAnswerCreated", {
           answer,
@@ -136,6 +153,7 @@ export const SocketProvider = (props: { children: ReactNode }) => {
     [peerContext, socket]
   );
 
+  // Function to handle the saving of an negotiation answer from another peer
   const handleNegoSaveAnswer = useCallback(
     async (answerWithPeer: {
       answer: RTCSessionDescriptionInit;
@@ -150,6 +168,7 @@ export const SocketProvider = (props: { children: ReactNode }) => {
     [peerContext]
   );
 
+  // Function to handle the saving of an ICE candidate from another peer
   const handleSaveIceCandidate = useCallback(
     async (candidateWithPeer: {
       candidate: RTCIceCandidate;
@@ -163,14 +182,15 @@ export const SocketProvider = (props: { children: ReactNode }) => {
     [peerContext]
   );
 
+  // Function to handle the clearing of tracks received from another peer
   const handleClearTracks = useCallback(
     async (socketId: string, type: "audio" | "video") => {
-      console.log("clear tracks", socketId);
       peerContext?.clearTracks(socketId, type);
     },
     [peerContext]
   );
 
+  // Function to handle the disconnection of a peer
   const handleSocketDisconnect = useCallback(
     async (socketId: string) => {
       peerContext?.removePeer(socketId);
@@ -178,6 +198,7 @@ export const SocketProvider = (props: { children: ReactNode }) => {
     [peerContext]
   );
 
+  // Function to handle the receiving of a chat message from another peer
   const handleReceiveChat = useCallback(
     async (messageWithSender: { sender: string; message: string }) => {
       peerContext?.receiveChat(
@@ -188,6 +209,7 @@ export const SocketProvider = (props: { children: ReactNode }) => {
     [peerContext]
   );
 
+  // Function to handle the receiving of a user request to join a room
   const handleUserRequestJoinRoom = useCallback(
     async ({
       socketId,
@@ -205,6 +227,7 @@ export const SocketProvider = (props: { children: ReactNode }) => {
     [peerContext]
   );
 
+  // Add socket event listeners
   useEffect(() => {
     socket.on("createOffers", handleCreateOffers);
     socket.on("acceptOffer", handleAcceptOffer);

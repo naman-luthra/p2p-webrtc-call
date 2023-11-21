@@ -4,18 +4,33 @@ import { ReactNode, createContext, useState } from "react";
 
 export const PeerContext = createContext<PeerContextType | null>(null);
 
+
+/**
+ * Provides the context for managing peers in a video call.
+ * @param props - The component props.
+ * @param props.children - The child components.
+ * @returns The PeerProvider component.
+ */
 export const PeerProvider = (props: {
     children: ReactNode;
 }) => {
+    // State to store the list of connected peers
     const [peers, setPeers] = useState<Peer[]>([]);
+
+    // State to store the local stream
     const [myStream, setMyStream] = useState<MediaStream | null>(null);
 
+    // State to store the chat history
     const [chatHistory, setChatHistory] = useState<Chat[]>([]);
+    // State to store the unread status of the chat window
     const [chatUnread, setChatUnread] = useState<boolean>(false);
+    // State to store the visibility of the chat window
     const [chatVisible, setChatVisibleAct] = useState<boolean>(false);
 
+    // State to store the audio stream
     const [audioStream, setAudioStream] = useState<MediaStream>(new MediaStream());
 
+    // State to store the list of pending user requests
     const [userRequests, setUserRequests] = useState<{
         socketId: string,
         user: {
@@ -25,14 +40,14 @@ export const PeerProvider = (props: {
         }
     }[]>([]);
 
+    // Function to get the peer object from the list of connected peers
     const getPeerBySocketId = (socketId: string) => {
         return peers.find(peer=>peer.socketId === socketId)?.peer;
     }
 
+    // Function to handle the track event
     const handleTrackEvent = async (event: RTCTrackEvent, socketId: string, socket:Socket<ServerToClientEvents, ClientToServerEvents>) => {
-        console.log("track event", event);
         setPeers(prev=>{
-            console.log("adding track...");
             const newPeers = prev.map(peer=>{
                 if(peer.socketId === socketId){
                     if(!peer.stream) peer.stream = new MediaStream();
@@ -56,26 +71,27 @@ export const PeerProvider = (props: {
                             peer.stream?.addTrack(track);
                         }
                     });
-                    console.log(peer.stream?.getTracks());
                 }
                 return peer;
             });
-            //handleNegoInit(newPeers[i].peer, newPeers[i].socketId, socket);
             return newPeers;
         });
     };
 
+    // Function to handle the ice candidate event
     const handleSendIceCandidate = async (event: RTCPeerConnectionIceEvent, to: string, socket:Socket<ServerToClientEvents, ClientToServerEvents>) => {
         if(event.candidate)
             socket.emit("iceCandidate", {candidate: event.candidate, to});
     };
 
+    // Function to handle the negotiation needed event
     const handleNegoInit = async (peer: RTCPeerConnection, to:string, socket:Socket<ServerToClientEvents, ClientToServerEvents>)=>{
         const offerDescription = await peer.createOffer();
         await peer.setLocalDescription(offerDescription);
         socket.emit("negoOffer", {offer: offerDescription, to});
     };
 
+    // Function to create a new peer connection
     const createPeer = (socketId: string, socket: Socket<ServerToClientEvents, ClientToServerEvents>, userDetails: {
         name: string,
         image: string,
@@ -152,6 +168,7 @@ export const PeerProvider = (props: {
         }
     }
 
+    // Function to save the offer received from the remote peer and create an answer
     const saveOfferAndCreateAnswer = async (d: string | RTCPeerConnection, offer: RTCSessionDescriptionInit, senderDetails: {
         name: string,
         image: string,
@@ -171,7 +188,8 @@ export const PeerProvider = (props: {
             return answer;
         }
     }
-    
+
+    // Function to save the answer received from the remote peer
     const saveAnswer = async (socketId: string, answer: RTCSessionDescriptionInit, userDetails: {
         name: string,
         image: string,
@@ -193,14 +211,15 @@ export const PeerProvider = (props: {
         }
     }
 
+    // Function to save the ICE candidate received from the remote peer
     const saveIceCandidate = async (socketId: string, candidate: RTCIceCandidate) => {
         const peer = getPeerBySocketId(socketId);
         if(peer)
             await peer.addIceCandidate(new RTCIceCandidate(candidate));
     }
 
+    // Function to send the local stream to all connected peers
     const sendStream = async (stream: MediaStream) => {
-        console.log("send stream", stream);
         peers.forEach(({peer}) => {
             stream.getTracks().forEach((track) => {
                 peer.addTrack(track, stream);
@@ -209,6 +228,7 @@ export const PeerProvider = (props: {
         setMyStream(stream);
     }
 
+    // Function to stop the local stream and notify all connected peers
     const stopStream = async (socket: Socket<ServerToClientEvents, ClientToServerEvents>, type: 'audio' | 'video' | 'presentation') => {
         peers.forEach(({socketId}) => {
             socket.emit("streamStopped", socketId, type);
@@ -216,8 +236,8 @@ export const PeerProvider = (props: {
         setMyStream(null);
     }
 
+    // Function to clear tracks of a specific type for a given peer
     const clearTracks = async (socketId: string, type: 'audio' | 'video' | 'presentation') => {
-        console.log("clear tracks", socketId);
         setPeers(prev=>{
             const newPeers = prev.map(peer=>{
                 if(peer.socketId === socketId){
@@ -262,6 +282,7 @@ export const PeerProvider = (props: {
         });
     }
 
+    // Function to send a chat message to all connected peers
     const sendChat = (socket: Socket<ServerToClientEvents, ClientToServerEvents>, message: string) => {
         setChatHistory(prev=>[...prev, {sender: "You", message, time: new Date()}]);
         peers.forEach(({socketId}) => {
@@ -269,8 +290,8 @@ export const PeerProvider = (props: {
         });
     }
 
+    // Function to receive a chat message from a remote peer
     const receiveChat = (sender: string, message: string) => {
-        console.log("message",sender,peers)
         setChatHistory(prev=>[...prev, {
             sender: peers.find(peer=>peer.socketId === sender)?.user?.name || 'Unknown',
             message,
@@ -279,6 +300,7 @@ export const PeerProvider = (props: {
         if(!chatVisible) setChatUnread(true);
     }
 
+    // Function to update the state of peers after rendering stream updates
     const streamsUpdatesRendered = () => {
         setPeers(
             prev=>{
@@ -292,6 +314,7 @@ export const PeerProvider = (props: {
         );
     }
 
+    // Function to remove a peer from the list of connected peers
     const removePeer = (socketId: string) => {
         setPeers(prev=>{
             const newPeers = prev.filter(peer=>peer.socketId !== socketId);
@@ -299,11 +322,13 @@ export const PeerProvider = (props: {
         });
     };
 
+    // Function to set the visibility of the chat window
     const setChatVisible = (b: boolean) => {
         if(b) setChatUnread(false);
         setChatVisibleAct(b);
     }
 
+    // Function to add a user request to the list of pending requests
     const addUserRequest = (socketId: string, user: {
         name: string,
         image: string,
@@ -313,15 +338,17 @@ export const PeerProvider = (props: {
             setUserRequests(prev=>[...prev, {socketId, user}]);
     }
 
+    // Function to accept a user request and emit the acceptance event
     const acceptUser = (socket: Socket<ServerToClientEvents, ClientToServerEvents>, roomId: string,  socketId: string) => {
         setUserRequests(prev=>prev.filter(req=>req.socketId !== socketId));
         socket.emit("userAccepted", roomId, socketId);
     }
 
+    // Function to ignore a user request
     const ignoreRequest = (socketId: string) => {
         setUserRequests(prev=>prev.filter(req=>req.socketId !== socketId));
     }
-
+    
     return (
         <PeerContext.Provider value={{
             peers,

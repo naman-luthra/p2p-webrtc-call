@@ -1,3 +1,14 @@
+/**
+ * Calculates the maximum area in a line based on the given parameters.
+ * @param n - The number of elements in the line.
+ * @param w - The width of the line.
+ * @param h - The height of the line.
+ * @returns An object containing the calculated values:
+ *   - elementWidth: The width of each element.
+ *   - elementHeight: The height of each element.
+ *   - area: The maximum area of the line.
+ *   - margin: An object containing the x and y margins.
+ */
 function calcMaxAreaInLine(n: number,w: number,h: number){
     if(w/(n*h)>16/9)
         return {
@@ -21,6 +32,17 @@ function calcMaxAreaInLine(n: number,w: number,h: number){
         };
 }
 
+
+/**
+ * Calculates the positions of elements in a layout.
+ * 
+ * @param n - The number of elements.
+ * @param sl - The starting left position.
+ * @param st - The starting top position.
+ * @param ew - The element width.
+ * @param w - The total width of the layout.
+ * @returns An array of objects representing the positions of the elements.
+ */
 function calcPositions(n: number, sl: number, st: number, ew: number, w:number){
     const res = [];
     const margin = w-ew*n;
@@ -35,6 +57,14 @@ function calcPositions(n: number, sl: number, st: number, ew: number, w:number){
     return res;
 }
 
+/**
+ * Calculates the best layout for a given number of elements in a container with specified width and height.
+ * 
+ * @param n - The number of elements.
+ * @param w - The width of the container.
+ * @param h - The height of the container.
+ * @returns An object containing the element width, element height, and coordinates of each element in the layout.
+ */
 export default function createLayout(n:number,w:number,h:number){
     let bestLayout={
         rows:1,
@@ -54,7 +84,6 @@ export default function createLayout(n:number,w:number,h:number){
             }
         }
     }
-    console.log(bestLayout);
     let elementsRemaining = n;
     const coordinates = [];
     const elementsPerRow = Math.ceil(n/bestLayout.rows);

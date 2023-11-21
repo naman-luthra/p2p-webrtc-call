@@ -2,6 +2,15 @@ import { Chat } from "@/context/types";
 import { useState } from "react";
 import { MdCancel, MdSend } from "react-icons/md";
 
+/**
+ * Represents the ChatBar component.
+ * @param {Object} props - The component props.
+ * @param {Chat[]} props.chatHistory - The chat history array.
+ * @param {function} props.handleChatSend - The function to handle sending a chat message.
+ * @param {boolean} props.chatVisible - The visibility state of the chat bar.
+ * @param {function} props.setChatVisible - The function to set the visibility state of the chat bar.
+ * @returns {JSX.Element} The rendered ChatBar component.
+ */
 export default function ChatBar({
   chatHistory,
   handleChatSend,

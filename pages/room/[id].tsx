@@ -7,7 +7,13 @@ import { useUser } from "@/context/UserProvider";
 import { useRouter } from "next/router";
 import { useCallback, useContext, useEffect, useState } from "react";
 
+/**
+ * Renders the RoomView component.
+ * 
+ * @returns The JSX element representing the RoomView component.
+ */
 export default function RoomView() {
+  
   const router = useRouter();
   const { id } = router.query;
   const [ error, setError ] = useState<string>("");
@@ -15,7 +21,16 @@ export default function RoomView() {
     roomId: string,
     secret: string
   } | null>(null);
-  const handleJoin = useCallback(async ()=>{
+  const socket = useContext(SocketContext);
+  const user = useUser();
+
+  /**
+   * Handles the join room functionality.
+   * Makes a POST request to the "/api/join-room" endpoint with the roomId.
+   * Sets the response if the roomId is returned, otherwise sets the error.
+   * If an error occurs during the request, sets the error message to "Room not found!".
+   */
+  const handleJoin = useCallback(async () => {
     try {
       const res = await fetch("/api/join-room", {
         method: "POST",
@@ -25,20 +40,23 @@ export default function RoomView() {
         body: JSON.stringify({
           roomId: id
         })
-      }).then(res=>res.json());
-      if(res.roomId) setResponse(res);
-      else{
+      }).then(res => res.json());
+      if (res.roomId) setResponse(res);
+      else {
         setError(res.error);
       }
     } catch (err) {
       setError("Room not found!");
     }
-  },[id]);
-  const socket = useContext(SocketContext);
-  const user = useUser();
+  }, [id]);
 
+  /**
+   * Handles the acceptance of a join request.
+   * 
+   * @param {string} roomId - The ID of the room.
+   * @param {string} secret - The secret for the room.
+   */
   const handleJoinRequestAccepted = useCallback((roomId: string, secret: string)=>{
-    console.log("Join request accepted");
     if(roomId === id){
       setResponse({
         roomId,

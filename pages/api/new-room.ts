@@ -12,6 +12,11 @@ type Data = {
   error: string
 }
 
+/**
+ * Generates a random room ID consisting of 9 lowercase alphabetic characters.
+ * 
+ * @returns The generated room ID.
+ */
 function generateRoomId(): string {
     const chars = 'abcdefghijklmnopqrstuvwxyz';
     let result = '';
@@ -21,6 +26,13 @@ function generateRoomId(): string {
     return result;
 }
 
+/**
+ * Handles the creation of a new room.
+ * 
+ * @param req - The NextApiRequest object.
+ * @param res - The NextApiResponse object.
+ * @returns A JSON response containing the roomId and secret if successful, or an error message if failed.
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Data>

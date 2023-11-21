@@ -4,6 +4,20 @@ import { FaUser } from "react-icons/fa";
 import { MdFullscreen, MdFullscreenExit, MdMicOff } from "react-icons/md";
 import { TbWindowMaximize, TbWindowMinimize } from "react-icons/tb";
 
+/**
+ * Video component for displaying a video stream with controls and user information.
+ *
+ * @param videoId - The ID of the video element.
+ * @param streaming - An object indicating whether audio and video are being streamed.
+ * @param user - An object containing user information, including image and name.
+ * @param children - Optional ReactNode to render additional content within the video component.
+ * @param pinned - The ID of the currently pinned video.
+ * @param setPinned - A function to set the ID of the pinned video.
+ * @param minimisable - A boolean indicating whether the video can be minimised.
+ * @param minimised - A boolean indicating whether the video is currently minimised.
+ * @param setMinimised - A function to set the minimised state of the video.
+ * @returns The Video component.
+ */
 export default function Video({
   videoId,
   streaming,
