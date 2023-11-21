@@ -1,5 +1,6 @@
 "use client";
 
+import Loading from "@/components/Loading";
 import Room from "@/components/Room";
 import { SocketContext } from "@/context/SocketProvider";
 import { useUser } from "@/context/UserProvider";
@@ -65,7 +66,7 @@ export default function RoomView() {
     handleJoinRequestAccepted
   ]);
 
-  if(!response)
+  if(!response){
     return (
       <main className="flex min-h-screen w-full p-8 justify-center items-center gap-4">
         <div className="grid gap-2">
@@ -76,15 +77,14 @@ export default function RoomView() {
         </div>
       </main>
     );
+  }
   else{
     if(response.secret){
       return (
         <Room id={response.roomId} secret={response.secret}/>
       )
     } else{
-      return (
-        <div>Joining...</div>
-      )
+      return <Loading />;
     }
   }
 }

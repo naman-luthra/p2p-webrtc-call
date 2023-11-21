@@ -19,27 +19,32 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Data>
 ) {
-  const session = await getServerSession(req, res, authOptions);
-  if (!session) {
-    res.status(401).json({ error: "Not Authorized!" });
-    return;
-  }
-  const { roomId } = req.body;
-  if(!roomId){
-    res.status(400).json({ error: "No room id provided!" });
-    return;
-  }
-  const roomsRef = collection(firestore, 'rooms');
-  const roomQuery =  query(roomsRef, where('roomId', '==', roomId));
-  const result = await getDocs(roomQuery);
-  if (result.docs.length === 0) {
-    res.status(404).json({ error: "Room not found!" });
-  }
-  else {
-    if(result.docs[0].data().users.find(({email}:{email: string})=>email===session.user?.email))
-      res.status(200).json({ roomId, action: 'join', secret: result.docs[0].data().secret });
-    else{
-      res.status(200).json({ roomId, action: 'request'});
+  try {
+    const session = await getServerSession(req, res, authOptions);
+    if (!session) {
+      res.status(401).json({ error: "Not Authorized!" });
+      return;
     }
+    const { roomId } = req.body;
+    if(!roomId){
+      res.status(400).json({ error: "No room id provided!" });
+      return;
+    }
+    const roomsRef = collection(firestore, 'rooms');
+    const roomQuery =  query(roomsRef, where('roomId', '==', roomId));
+    const result = await getDocs(roomQuery);
+    if (result.docs.length === 0) {
+      res.status(404).json({ error: "Room not found!" });
+    }
+    else {
+      if(result.docs[0].data().users.find(({email}:{email: string})=>email===session.user?.email))
+        res.status(200).json({ roomId, action: 'join', secret: result.docs[0].data().secret });
+      else{
+        res.status(200).json({ roomId, action: 'request'});
+      }
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal server error!" });
   }
 }
