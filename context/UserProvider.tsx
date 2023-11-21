@@ -1,3 +1,4 @@
+import Loading from "@/components/Loading";
 import { ReactNode, createContext, useContext } from "react";
 
 const UserContext = createContext<{
@@ -27,7 +28,7 @@ export default function UserProvider(props: {
     }
   }){
     console.log(props.userData);
-    if(!props.userData) return <>Loading...</>;
+    if(!props.userData) return <Loading />;
     return (
         <UserContext.Provider value={{
             name: props.userData.name || "Unknown",
