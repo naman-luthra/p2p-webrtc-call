@@ -2,6 +2,7 @@ import { PeerContext } from "@/context/PeersProvider";
 import { SocketContext } from "@/context/SocketProvider";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
+  MdCallEnd,
   MdChatBubble,
   MdMarkChatUnread,
   MdMic,
@@ -16,6 +17,8 @@ import Video from "@/components/Video";
 import ChatBar from "@/components/ChatBar";
 import Image from "next/image";
 import createLayout from "@/utils/layout";
+import { redirect } from "next/navigation";
+import { useRouter } from "next/router";
 
 /**
  * Room component represents a video call room.
@@ -252,6 +255,7 @@ export default function Room({ id, secret, initVideo, initAudio }: {
     if (!videoGrid) return;
     const containerWidth = videoGrid.clientWidth;
     const containerHeight = videoGrid.clientHeight;
+
     const layout = createLayout(
       numberOfStreams,
       containerWidth,
@@ -285,6 +289,8 @@ export default function Room({ id, secret, initVideo, initAudio }: {
     if(videoGrid)
         new ResizeObserver(handleLayout).observe(videoGrid);
   }, [numberOfStreams, minimised]);
+
+  const router = useRouter();
 
   return (
     <div className="absolute inset-0 flex">
@@ -379,6 +385,15 @@ export default function Room({ id, secret, initVideo, initAudio }: {
               <MdOutlinePresentToAll className="w-6 h-6"/>
             </button>
           )}
+          <button
+              onClick={()=>{
+                socket?.disconnect();
+                router.push("/");
+              }}
+              className="p-2 bg-gray-300 rounded-full hover:opacity-90"
+            >
+              <MdCallEnd className="w-6 h-6"/>
+            </button>
           <button
             onClick={() =>
               peerContext?.setChatVisible(!peerContext?.chatVisible)
