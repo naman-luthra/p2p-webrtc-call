@@ -180,7 +180,7 @@ export default function RoomView() {
         <Room initVideo={video!==null} initAudio={audio} id={response.roomId} secret={response.secret}/>
       )
     } else{
-      return <Loading />;
+      return <Loading text="Asking to join!"/>;
     }
   }
 }
