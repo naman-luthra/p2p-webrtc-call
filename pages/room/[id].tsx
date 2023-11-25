@@ -2,10 +2,12 @@
 
 import Loading from "@/components/Loading";
 import Room from "@/components/Room";
+import Video from "@/components/Video";
 import { SocketContext } from "@/context/SocketProvider";
 import { useUser } from "@/context/UserProvider";
 import { useRouter } from "next/router";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { use, useCallback, useContext, useEffect, useState } from "react";
+import { MdMic, MdMicOff, MdVideocam, MdVideocamOff } from "react-icons/md";
 
 /**
  * Renders the RoomView component.
@@ -23,6 +25,28 @@ export default function RoomView() {
   } | null>(null);
   const socket = useContext(SocketContext);
   const user = useUser();
+
+  const [video, setVideo] = useState<MediaStream | null>(null);
+  const [audio, setAudio] = useState<boolean>(false);
+
+   /**
+   * Handles turning on the video.
+   */
+   const handleVideoOn = () => {
+    navigator.mediaDevices
+      .getUserMedia({ video: true, audio: false })
+      .then((stream) => {
+        setVideo(stream);
+      });
+  };
+
+  /**
+   * Handles turning off the video.
+   */
+  const handleVideoOff = () => {
+    video?.getTracks().forEach((track) => track.stop());
+    setVideo(null);
+  };
 
   /**
    * Handles the join room functionality.
@@ -66,6 +90,13 @@ export default function RoomView() {
   },[id]);
 
   useEffect(()=>{
+    const videoRef = document.getElementById("localVideo") as HTMLAudioElement;
+    if (!videoRef) return;
+    else videoRef.srcObject = video;
+  }
+  , [video]);
+
+  useEffect(()=>{
     if((socket && user) && (response?.roomId && !response?.secret)){
       socket?.emit("requestJoinRoom",
         response.roomId,
@@ -86,12 +117,59 @@ export default function RoomView() {
 
   if(!response){
     return (
-      <main className="flex min-h-screen w-full p-8 justify-center items-center gap-4">
-        <div className="grid gap-2">
-          <div className="">Join Meeting</div>
-          <div>{id}</div>
+      <main className="flex flex-col md:flex-row min-h-screen w-full p-8 justify-center items-center gap-4 bg-black text-white">
+        <Video
+            videoId="localVideo"
+            streaming={{
+              audio,
+              video: !!video,
+            }}
+            user={{
+              image: user?.image || "",
+              name: user?.name || "",
+            }}
+            pinnable={false}
+            minimisable={false}
+            position="relative"
+            className="w-full md:w-[640px] md:h-[360px]"
+        />
+        <div className="grid gap-2 justify-items-center">
+          <div className="text-2xl">Join Meeting</div>
+          <div className=" font-mono">{id}</div>
           {error && <div className="text-red-500">{error}</div>}
-          <button onClick={handleJoin} className="w-fit px-3 py-1 border border-gray-800 rounded-lg">Join</button>
+          <div className="flex gap-2">
+          {video ? (
+            <button
+              onClick={handleVideoOff}
+              className="p-2 bg-gray-700 text-gray-100 rounded-full hover:opacity-90"
+            >
+              <MdVideocam className="w-6 h-6" />
+            </button>
+          ) : (
+            <button
+              onClick={handleVideoOn}
+              className="p-2 bg-gray-300 text-black rounded-full hover:opacity-90"
+            >
+              <MdVideocamOff className="w-6 h-6" />
+            </button>
+          )}
+          {audio ? (
+            <button
+              onClick={()=>setAudio(false)}
+              className="p-2 bg-gray-700 text-gray-100 rounded-full hover:opacity-90"
+            >
+              <MdMic className="w-6 h-6" />
+            </button>
+          ) : (
+            <button
+              onClick={()=>setAudio(true)}
+              className="p-2 bg-gray-300 text-black rounded-full hover:opacity-90"
+            >
+              <MdMicOff className="w-6 h-6" />
+            </button>
+          )}
+          </div>
+          <button onClick={handleJoin} className="w-fit px-3 py-1 text-lg font-semibold bg-gray-300 text-black rounded-lg mt-2">Join</button>
         </div>
       </main>
     );
@@ -99,7 +177,7 @@ export default function RoomView() {
   else{
     if(response.secret){
       return (
-        <Room id={response.roomId} secret={response.secret}/>
+        <Room initVideo={video!==null} initAudio={audio} id={response.roomId} secret={response.secret}/>
       )
     } else{
       return <Loading />;

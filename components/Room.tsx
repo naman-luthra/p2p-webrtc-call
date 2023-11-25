@@ -6,6 +6,8 @@ import {
   MdMarkChatUnread,
   MdMic,
   MdMicOff,
+  MdOutlinePresentToAll,
+  MdPausePresentation,
   MdVideocam,
   MdVideocamOff,
 } from "react-icons/md";
@@ -20,7 +22,12 @@ import createLayout from "@/utils/layout";
  * @param id - The ID of the room.
  * @param secret - The secret key of the room.
  */
-export default function Room({ id, secret }: { id: string; secret: string }) {
+export default function Room({ id, secret, initVideo, initAudio }: { 
+  id: string; 
+  secret: string;
+  initVideo?: boolean;
+  initAudio?: boolean;
+}) {
   const user = useUser();
 
   const socket = useContext(SocketContext);
@@ -169,6 +176,8 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
 
   useEffect(() => {
     if (!socket || !id) return;
+    if(initVideo) handleVideoOn();
+    if(initAudio) handleAudioOn();
     socket.emit("roomJoined", id, secret);
     return () => {
       socket.emit("roomLeft", id);
@@ -286,12 +295,13 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
             videoId="localVideo"
             streaming={{
               audio: !!audio,
-              video: !!video,
+              video: !!video || !!presentation,
             }}
             user={{
               image: user?.image || "",
               name: user?.name || "",
             }}
+            pinnable
             pinned={pinned}
             setPinned={setPinned}
             minimisable={true}
@@ -309,6 +319,7 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
                 image: user?.image || "",
                 name: user?.name || "",
               }}
+              pinnable
               pinned={pinned}
               setPinned={setPinned}
               key={id}
@@ -317,21 +328,27 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
           ))}
         </div>
         <div className="flex items-center justify-center gap-4 p-2 relative">
-          {video ? (
-            <button
-              onClick={handleVideoOff}
-              className="p-2 bg-gray-700 text-gray-100  rounded-full hover:opacity-90"
-            >
-              <MdVideocam className="w-6 h-6" />
-            </button>
-          ) : (
-            <button
-              onClick={handleVideoOn}
-              className="p-2 bg-gray-300 rounded-full hover:opacity-90"
-            >
-              <MdVideocamOff className="w-6 h-6" />
-            </button>
-          )}
+          {
+            !presentation && (
+              <>
+                {video ? (
+                  <button
+                    onClick={handleVideoOff}
+                    className="p-2 bg-gray-700 text-gray-100  rounded-full hover:opacity-90"
+                  >
+                    <MdVideocam className="w-6 h-6" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleVideoOn}
+                    className="p-2 bg-gray-300 rounded-full hover:opacity-90"
+                  >
+                    <MdVideocamOff className="w-6 h-6" />
+                  </button>
+                )}
+              </>
+            )
+          }
           {audio ? (
             <button
               onClick={handleAudioOff}
@@ -352,14 +369,14 @@ export default function Room({ id, secret }: { id: string; secret: string }) {
               onClick={handlePresentationOff}
               className="p-2 bg-gray-700 text-gray-100 rounded-full hover:opacity-90"
             >
-              Stop Presentation
+              <MdPausePresentation className="w-6 h-6"/>
             </button>
           ) : (
             <button
               onClick={handlePresentationOn}
               className="p-2 bg-gray-300 rounded-full hover:opacity-90"
             >
-              Start Presentation
+              <MdOutlinePresentToAll className="w-6 h-6"/>
             </button>
           )}
           <button

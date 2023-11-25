@@ -23,11 +23,14 @@ export default function Video({
   streaming,
   user,
   children,
+  pinnable,
   pinned,
   setPinned,
   minimisable,
   minimised,
-  setMinimised
+  setMinimised,
+  position,
+  className
 }: {
   videoId: string;
   streaming: {
@@ -39,24 +42,29 @@ export default function Video({
     name: string;
   };
   children?: ReactNode;
-  pinned: string;
-  setPinned: (pinned: string) => void;
+  pinnable: boolean;
+  pinned?: string;
+  setPinned?: (pinned: string) => void;
   minimisable: boolean;
   minimised?: boolean;
   setMinimised?: (minimised: boolean) => void;
+  position?: "absolute" | "relative" | "fixed";
+  className?: string;
 }) {
 
   return (
     <div
       id={`container-${videoId}`}
       className={
-        minimisable && minimised
-          ? "absolute p-2 z-20"
-          : `absolute p-2 ${
+        (minimisable && minimised
+          ? "p-2 z-20"
+          : `p-2 ${
               pinned && pinned !== videoId ? "hidden" : "block"
-            }`
+            }`) + " " + className
       }
-
+      style={{
+        position: position ? position : "absolute"
+      }}
       draggable={minimisable && minimised}
     >
       <div className={`overflow-hidden h-full w-full object-contain box-border relative group rounded-lg ${(minimisable && minimised) ? 'bg-[#212121]' : 'bg-[#3d3d3d]'}`}>
@@ -93,19 +101,21 @@ export default function Video({
           )}
           {
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-              <div className="bg-black gap-2 bg-opacity-70 p-2 rounded-lg hidden cursor-pointer group-hover:flex">
+              {
+                (minimisable || pinnable) &&
+                <div className="bg-black gap-2 bg-opacity-70 p-2 rounded-lg hidden cursor-pointer group-hover:flex">
                 {(!pinned && !minimised) ? (
                   <MdFullscreen
                     onClick={(e: MouseEvent) => {
-                        setPinned(videoId);
+                        setPinned?.(videoId);
                         e.stopPropagation();
                     }}
                     className="h-6 w-6 hover:scale-110"
                   />
-                ) : (minimisable && minimised) ? <></> : (
+                ) : ((minimisable && minimised)) ? <></> : (
                   <MdFullscreenExit
                     onClick={(e: MouseEvent) => {
-                        setPinned("");
+                        setPinned?.("");
                         e.stopPropagation();
                     }}
                     className="h-6 w-6 hover:scale-90"
@@ -133,6 +143,7 @@ export default function Video({
                   </>
                 )}
               </div>
+              }
             </div>
           }
           {children}
